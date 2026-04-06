@@ -3,6 +3,7 @@ services:
   - type: web
     name: ai-resume-backend
     env: docker
+    plan: free
     region: oregon # adjust as needed (oregon, frankfurt, ohio, singapore)
     rootDir: ai_resume_analyzer
     dockerfilePath: Dockerfile
@@ -15,6 +16,7 @@ services:
   - type: web
     name: ai-resume-frontend
     env: python
+    plan: free
     region: oregon
     rootDir: CV_MIND-main/CV_MIND-main
     buildCommand: pip install -r requirements.txt
