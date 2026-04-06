@@ -1,0 +1,8 @@
+*.csv 
+data/ 
+dataset/ 
+*.zip 
+*.ckpt 
+*.pt 
+*.pth 
+.ipynb_checkpoints/ 

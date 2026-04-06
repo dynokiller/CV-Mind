@@ -1,0 +1,40 @@
+services:
+  # 1. AI Backend API
+  - type: web
+    name: ai-resume-backend
+    env: docker
+    region: oregon # adjust as needed (oregon, frankfurt, ohio, singapore)
+    rootDir: ai_resume_analyzer
+    dockerfilePath: Dockerfile
+    autoDeploy: false
+    envVars:
+      - key: MONGO_URI
+        sync: false # Set this manually in Render dashboard to your Atlas string
+
+  # 2. Flask Frontend Dashboard
+  - type: web
+    name: ai-resume-frontend
+    env: python
+    region: oregon
+    rootDir: CV_MIND-main/CV_MIND-main
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    autoDeploy: false
+    envVars:
+      - key: PARSERAI_URL
+        # This dynamically injects the backend's Render URL + the endpoint path
+        value: https://ai-resume-backend.onrender.com/upload-analyze
+      - key: MONGO_URL
+        sync: false # Put the same Mongo URI string as the backend
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false 
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: RECAPTCHA_SITE_KEY
+        sync: false
+      - key: RECAPTCHA_SECRET_KEY
+        sync: false
+      - key: SENDMAIL_API_URL
+        sync: false

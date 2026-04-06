@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+
+# Virtual Environment
+venv/
+env/
+.env
+
+# Large Deprecated Models
+models/roberta-domain/
+models/checkpoints/
+
+# System logs
+*.txt
+!requirements.txt
+!README.md

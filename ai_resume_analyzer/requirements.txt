@@ -1,0 +1,50 @@
+# ═══════════════════════════════════════════════════════
+#  AI Resume Analyzer — Python Dependencies
+#  Upgraded: sklearn → RoBERTa + SHAP + SentenceTransformer
+# ═══════════════════════════════════════════════════════
+
+# ── API Framework ──────────────────────────────────────
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.9
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
+
+# ── Deep Learning ──────────────────────────────────────
+torch>=2.2.0                   # PyTorch (CPU by default; GPU via separate CUDA wheel)
+transformers>=4.38.0           # RoBERTa tokenizer, model, Trainer
+datasets>=2.18.0               # HuggingFace Dataset for training pipeline
+accelerate>=0.28.0             # Required by transformers Trainer
+sentencepiece>=0.2.0           # Tokenizer backend
+protobuf>=3.20.0               # Required by HuggingFace tokenizer serialization
+
+# ── SentenceTransformers (match score) ────────────────
+sentence-transformers>=2.7.0
+
+# ── XAI ───────────────────────────────────────────────
+shap>=0.45.0
+
+# ── Resume Parsing ─────────────────────────────────────
+pymupdf>=1.23.0                # PDF → text (fitz)
+python-docx>=1.1.0             # DOCX → text
+
+# ── Data / ML utilities ────────────────────────────────
+scikit-learn>=1.4.0            # LabelEncoder, metrics
+pandas>=2.2.0
+numpy>=1.26.0
+joblib>=1.3.0
+
+# ── Advanced ML / Imbalance (V4 Pipeline) ──────────────
+xgboost>=2.0.0                 # Dense vector training
+lightgbm>=4.0.0
+imbalanced-learn>=0.12.0       # SMOTE
+spacy>=3.7.0                   # Advanced lemmatization
+seaborn>=0.13.0                # Heatmaps
+
+# ── Logging ────────────────────────────────────────────
+structlog>=24.1.0
+
+# ── Testing ────────────────────────────────────────────
+pytest>=8.0.0
+httpx>=0.27.0                  # async test client for FastAPI
+motor>=3.3.0

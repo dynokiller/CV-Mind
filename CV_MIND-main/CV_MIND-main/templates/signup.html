@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign Up - Resume Analyzer</title>
+
+    <!-- Base CSS -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+
+    <!-- Local Font Awesome 7.2.0 -->
+    <link
+      rel="preload"
+      href="{{ url_for('static', filename='css/fontawesome-free-7.2.0-web/css/all.min.css') }}"
+      as="style"
+      onload="
+        this.onload = null;
+        this.rel = 'stylesheet';
+      "
+    />
+
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='../static/fontawesome-free-7.2.0-web/css/all.min.css') }}"
+      />
+    </noscript>
+
+    <!-- Preload Fonts (Removes Icon Flicker Completely) -->
+    <link
+      rel="preload"
+      href="{{ url_for('static', filename='../static/css/fontawesome-free-7.2.0-web/webfonts/fa-solid-900.woff2') }}"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <link
+      rel="preload"
+      href="{{ url_for('static', filename='../static/css/fontawesome-free-7.2.0-web/webfonts/fa-regular-400.woff2') }}"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="card form-box">
+        <!-- Logo Area -->
+        <div
+          class="logo-area"
+          style="justify-content: center; margin-bottom: 16px"
+        >
+          <img
+            src="{{ url_for('static', filename='images/logo.png') }}"
+            alt="logo"
+          />
+          <h2><i class="fa-solid fa-file-lines"></i> Resume Analyzer</h2>
+        </div>
+
+        <h2><i class="fa-solid fa-user-plus"></i> Create Account</h2>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %} {% if
+        messages %}
+        <div class="flash-box">
+          {% for category, message in messages %}
+          <div
+            class="flash-msg {% if category == 'success' %}flash-success{% else %}flash-error{% endif %}"
+          >
+            {{ message }}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %} {% endwith %}
+
+        <!-- Signup Form -->
+        <form id="signupForm" method="POST" action="{{ url_for('signup') }}">
+          <div class="input-group">
+            <label><i class="fa-solid fa-user"></i> Full Name</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              placeholder="Enter full name"
+              required
+            />
+          </div>
+
+          <div class="input-group">
+            <label><i class="fa-solid fa-envelope"></i> Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              placeholder="Enter email address"
+              required
+            />
+          </div>
+
+          <div class="input-group">
+            <label><i class="fa-solid fa-lock"></i> Password</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="Create password"
+              required
+            />
+          </div>
+
+          <button
+            id="signupBtn"
+            type="submit"
+            class="btn btn-primary"
+            style="width: 100%"
+          >
+            <i class="fa-solid fa-check"></i> Sign Up
+          </button>
+        </form>
+
+        <p class="link-text">
+          Already have an account?
+          <a href="{{ url_for('signin') }}">Sign In</a>
+        </p>
+      </div>
+    </div>
+
+    <!-- Auto hide flash messages -->
+    <script>
+      setTimeout(() => {
+        const alerts = document.querySelectorAll(".flash-msg");
+        alerts.forEach((alert) => {
+          alert.style.display = "none";
+        });
+      }, 3000);
+    </script>
+
+    <!-- Disable inputs + show loading -->
+    <script>
+      document
+        .getElementById("signupForm")
+        .addEventListener("submit", function () {
+          const signupBtn = document.getElementById("signupBtn");
+
+          signupBtn.disabled = true;
+          signupBtn.classList.add("btn-loading");
+
+          signupBtn.innerHTML =
+            '<i class="fa-solid fa-circle-notch spinner"></i> Creating account...';
+        });
+    </script>
+  </body>
+</html>

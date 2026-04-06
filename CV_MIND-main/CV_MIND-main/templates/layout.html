@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ title if title else "Resume Analyzer" }}</title>
+
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="{{ url_for('static', filename='../static/images/favicon-32x32.png') }}?v=2"
+    />
+
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="{{ url_for('static', filename='../static/images/apple-touch-icon-180x180.png') }}"
+    />
+
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+
+    <!-- Base layout CSS -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/base.css') }}"
+    />
+
+    <!-- Page CSS -->
+    {% if page == "dashboard" %}
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/dashboard.css') }}"
+    />
+    {% elif page == "upload" %}
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/upload.css') }}"
+    />
+    {% elif page == "parsed" %}
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/parsed.css') }}"
+    />
+    {% elif page == "analytics" %}
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/analytics.css') }}"
+    />
+    {% elif page == "matching" %}
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/matching.css') }}"
+    />
+    {% elif page == "settings" %}
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/settings.css') }}"
+    />
+    {% endif %}
+  </head>
+
+  <body>
+    <div class="app">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="brand">
+          <img
+            src="{{ url_for('static', filename='images/logo.png') }}"
+            alt="logo"
+            class="brand-logo"
+          />
+        </div>
+
+        <nav class="menu">
+          <a
+            class="{% if page=='dashboard' %}active{% endif %}"
+            href="/dashboard"
+          >
+            <i class="fa-solid fa-gauge-high"></i> Dashboard
+          </a>
+
+          <a class="{% if page=='upload' %}active{% endif %}" href="/upload">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Upload Resume
+          </a>
+
+          <a class="{% if page=='parsed' %}active{% endif %}" href="/parsed">
+            <i class="fa-solid fa-file-circle-check"></i> Parsed Resumes
+          </a>
+
+          <a
+            class="{% if page=='analytics' %}active{% endif %}"
+            href="/analytics"
+          >
+            <i class="fa-solid fa-chart-line"></i> Analytics
+          </a>
+
+          <a
+            class="{% if page=='matching' %}active{% endif %}"
+            href="/matching"
+          >
+            <i class="fa-solid fa-briefcase"></i> Job Matching
+          </a>
+
+          <a
+            class="{% if page=='settings' %}active{% endif %}"
+            href="/settings"
+          >
+            <i class="fa-solid fa-gear"></i> Settings
+          </a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="theme-row">
+            <div class="theme-left">
+              <i id="themeIcon" class="fa-solid fa-sun"></i>
+              <span id="themeText">Light mode</span>
+            </div>
+
+            <label class="switch">
+              <input type="checkbox" id="themeToggle" />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <a href="/logout"
+            ><i class="fa-solid fa-right-from-bracket"></i> Logout</a
+          >
+        </div>
+      </aside>
+
+      <!-- Main -->
+      <main class="main">
+        <!-- Topbar -->
+        <header class="topbar">
+          <div class="search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" placeholder="Search candidates..." />
+          </div>
+
+          <div class="top-actions">
+            <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
+            <button class="icon-btn">
+              <i class="fa-regular fa-envelope"></i>
+            </button>
+
+            <!-- ✅ Profile Dropdown on Hover -->
+            <div class="profile-wrapper">
+              <div class="profile">
+                {% if session.get("profile_img") %}
+                <img
+                  src="{{ session.get('profile_img') }}"
+                  class="avatar-img"
+                  alt="profile"
+                />
+                {% else %}
+                <div class="avatar">
+                  {{ (session.get('name','JD')[0:2] | upper) }}
+                </div>
+                {% endif %}
+
+                <i class="fa-solid fa-chevron-down"></i>
+              </div>
+
+              <!-- Dropdown Card -->
+              <div class="profile-card">
+                <div class="profile-card-header">
+                  <div class="profile-big-avatar">
+                    {% if session.get("profile_img") %}
+                    <img
+                      src="{{ session.get('profile_img') }}"
+                      class="avatar-img"
+                      alt="profile"
+                    />
+                    {% else %}
+                    <div class="avatar">
+                      {{ (session.get('name','US')[0:2] | upper) }}
+                    </div>
+                    {% endif %}
+                  </div>
+                  <div>
+                    <h4>{{ session.get('name','User') }}</h4>
+                    <p>{{ session.get('user_email','user@email.com') }}</p>
+                  </div>
+                </div>
+
+                <div class="profile-links">
+                  <a href="/dashboard"
+                    ><i class="fa-solid fa-gauge-high"></i> Dashboard</a
+                  >
+                  <a href="/settings"
+                    ><i class="fa-solid fa-gear"></i> Settings</a
+                  >
+
+                  <a href="/logout" class="logout"
+                    ><i class="fa-solid fa-right-from-bracket"></i> Logout</a
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Page content -->
+        <section class="content">{% block content %}{% endblock %}</section>
+      </main>
+    </div>
+    <!-- Personalization Modal -->
+    <!-- Personalization Modal -->
+    <div id="personalizationModal" class="modal-overlay">
+      <div class="modal-box">
+        <!-- Header -->
+        <div class="modal-header">
+          <h2>Welcome</h2>
+          <button id="closeModal" class="close-btn">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <p class="subtitle">Help us personalize your experience</p>
+
+        <!-- Role -->
+        <div class="question">
+          <label>Who are you?</label>
+
+          <select id="roleSelect" class="custom-select">
+            <option value="">Select role</option>
+            <option value="student">Student</option>
+            <option value="professional">Professional</option>
+            <option value="worker">Worker</option>
+          </select>
+        </div>
+
+        <!-- Category -->
+        <div class="question">
+          <label>Select category</label>
+
+          <select id="subRoleSelect" class="custom-select">
+            <option value="">Select category</option>
+          </select>
+        </div>
+
+        <!-- Experience -->
+        <div class="question">
+          <label>Experience Level</label>
+
+          <select id="experienceSelect" class="custom-select">
+            <option value="">Select experience</option>
+            <option>Fresher</option>
+            <option>0-2 years</option>
+            <option>2-5 years</option>
+            <option>5+ years</option>
+          </select>
+        </div>
+
+        <!-- Goal -->
+        <div class="question">
+          <label>What do you want to do?</label>
+
+          <select id="goalSelect" class="custom-select">
+            <option value="">Select goal</option>
+            <option>Analyze resumes</option>
+            <option>Recruit candidates</option>
+            <option>Improve resume</option>
+            <option>Find job matches</option>
+          </select>
+        </div>
+
+        <button id="saveRoleBtn" class="save-role-btn">Save Preferences</button>
+      </div>
+    </div>
+
+    <script>
+      const toggle = document.getElementById("themeToggle");
+      const icon = document.getElementById("themeIcon");
+      const text = document.getElementById("themeText");
+
+      function applyTheme(theme) {
+        document.body.setAttribute("data-theme", theme);
+        localStorage.setItem("theme", theme);
+
+        if (theme === "dark") {
+          toggle.checked = true;
+
+          // show light mode label when dark is ON
+          icon.className = "fa-solid fa-moon";
+          text.innerText = "Dark mode";
+        } else {
+          toggle.checked = false;
+
+          // show dark mode label when light is ON
+          icon.className = "fa-solid fa-sun";
+          text.innerText = "Light mode";
+        }
+      }
+
+      // Load saved theme
+      const savedTheme = localStorage.getItem("theme") || "light";
+      applyTheme(savedTheme);
+
+      // Toggle theme
+      toggle.addEventListener("change", () => {
+        applyTheme(toggle.checked ? "dark" : "light");
+      });
+    </script>
+    <script>
+      // Prevent browser back button after login
+      if (window.history && window.history.pushState) {
+        window.history.pushState(null, null, window.location.href);
+        window.onpopstate = function () {
+          window.history.pushState(null, null, window.location.href);
+        };
+      }
+    </script>
+    <script>
+      const roleSelect = document.getElementById("roleSelect");
+      const subRoleSelect = document.getElementById("subRoleSelect");
+      const saveBtn = document.getElementById("saveRoleBtn");
+      const modal = document.getElementById("personalizationModal");
+      const closeBtn = document.getElementById("closeModal");
+
+      const subRoleData = {
+        student: [
+          "Computer Science",
+          "Engineering",
+          "Business",
+          "Design",
+          "Other",
+        ],
+
+        professional: [
+          "HR",
+          "Recruiter",
+          "Developer",
+          "Manager",
+          "Data Analyst",
+          "Product Manager",
+        ],
+
+        worker: [
+          "Technician",
+          "Operator",
+          "Supervisor",
+          "Field Worker",
+          "Electrician",
+        ],
+      };
+
+      /* populate category dropdown */
+
+      roleSelect.addEventListener("change", () => {
+        const role = roleSelect.value;
+
+        subRoleSelect.innerHTML = "<option>Select category</option>";
+
+        if (subRoleData[role]) {
+          subRoleData[role].forEach((option) => {
+            const opt = document.createElement("option");
+
+            opt.value = option;
+
+            opt.textContent = option;
+
+            subRoleSelect.appendChild(opt);
+          });
+        }
+      });
+
+      /* save */
+
+      saveBtn.addEventListener("click", () => {
+        const role = roleSelect.value;
+        const subrole = subRoleSelect.value;
+        const exp = document.getElementById("experienceSelect").value;
+        const goal = document.getElementById("goalSelect").value;
+
+        fetch("/save-user-role", {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({
+            role,
+            subrole,
+            experience: exp,
+            goal,
+          }),
+        })
+          .then((res) => res.json())
+
+          .then(() => {
+            modal.style.display = "none";
+          });
+      });
+
+      /* close modal */
+
+      closeBtn.onclick = () => {
+        fetch("/skip-personalization", {
+          method: "POST",
+        })
+          .then((res) => res.json())
+          .then(() => {
+            modal.style.display = "none";
+          });
+      };
+
+      /* show only first login */
+
+      const firstLogin = "{{ session.get('show_personalization', False) }}";
+
+      if (firstLogin === "True") {
+        modal.style.display = "flex";
+      } else {
+        modal.style.display = "none";
+      }
+    </script>
+  </body>
+</html>

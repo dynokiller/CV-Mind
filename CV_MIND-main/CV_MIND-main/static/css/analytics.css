@@ -1,0 +1,53 @@
+.analytics-grid{
+  display:grid;
+  grid-template-columns: repeat(2,1fr);
+  gap:18px;
+}
+
+.analytics-grid .full{
+  grid-column: 1 / -1;
+}
+
+.card-box{
+  background: rgba(255,255,255,0.92);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:18px;
+  box-shadow: 0 10px 35px rgba(15,23,42,0.06);
+}
+
+.chart-placeholder{
+  margin-top:14px;
+  height:240px;
+  border-radius:16px;
+  border: 2px dashed #dbeafe;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color: var(--muted);
+  font-weight:700;
+}
+
+@media(max-width:1000px){
+  .analytics-grid{ grid-template-columns:1fr; }
+}
+
+
+/* ============================
+   DARK MODE - Analytics Page
+============================ */
+
+/* Card box */
+body[data-theme="dark"] .analytics-grid .card-box {
+  background: rgba(20, 24, 35, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
+  color: #e2e8f0;
+}
+
+/* Chart placeholder */
+body[data-theme="dark"] .analytics-grid .chart-placeholder {
+  border: 2px dashed rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: #94a3b8;
+}

@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="settings-box">
+  <h2><i class="fa-solid fa-gear"></i> Settings</h2>
+
+  <div class="setting-item">
+    <span>Enable Notifications</span>
+    <label class="switch">
+      <input type="checkbox" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="setting-item">
+    <span>Auto Resume Parsing</span>
+    <label class="switch">
+      <input type="checkbox">
+      <span class="slider"></span>
+    </label>
+  </div>
+</div>
+
+{% endblock %}

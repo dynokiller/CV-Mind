@@ -1,0 +1,12 @@
+version: "3.8"
+services:
+  resume_api:
+    build: .
+    container_name: resume_analyzer_api
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./models:/app/models # Mount models so they don't have to be baked into image
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: always
