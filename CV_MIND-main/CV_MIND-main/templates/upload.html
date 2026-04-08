@@ -345,7 +345,14 @@
           ${statsList ? `<p style="margin-top: 12px; margin-bottom: 4px;"><strong>Top Probabilities:</strong></p><ul>${statsList}</ul>` : ""}
       `;
 
+      // Force Visibility Fixes
       container.style.display = "block";
+      container.style.visibility = "visible";
+      container.style.opacity = "1";
+      container.style.border = "2px solid red"; // Temporary Debug Border
+      
+      // Auto Scroll
+      container.scrollIntoView({ behavior: "smooth" });
   }
 </script>
 
