@@ -89,12 +89,18 @@ def safe_insert(collection, data):
 def safe_update_one(collection, query, update, **kwargs):
     if collection is not None and isinstance(collection, list):
         item = safe_find_one(collection, query)
+        if item is None and kwargs.get("upsert"):
+            item = dict(query)
+            collection.append(item)
         if item:
             if "$set" in update:
                 item.update(update["$set"])
             if "$unset" in update:
                 for k in update["$unset"]:
                     item.pop(k, None)
+            if "$inc" in update:
+                for k, v in update["$inc"].items():
+                    item[k] = item.get(k, 0) + v
         return item
     return None
 
@@ -113,10 +119,6 @@ def safe_find(collection, *args, **kwargs):
     return []
 
 def is_logged_in():
-    if user_collection is None:
-        session["user_id"] = "fallback_user"
-        session["name"] = "Fallback Tester"
-        return True
     return session.get("user_id") is not None
 
 
@@ -839,11 +841,10 @@ def dashboard():
 
     stats = get_user_stats(user_id)
 
-    if activity_collection is not None:
-        activity_cursor = safe_find(activity_collection, {"user_id": user_id}).sort("upload_date", -1).limit(8)
-        activities = list(activity_cursor)
-    else:
-        activities = []
+    all_activities_raw = safe_find(activity_collection, {"user_id": user_id})
+    # Sort by upload_date descending and take top 8
+    all_activities_raw.sort(key=lambda x: x.get("upload_date", datetime.min), reverse=True)
+    activities = all_activities_raw[:8]
 
     for act in activities:
         act["upload_date_local"] = utc_to_ist(act.get("upload_date"))
@@ -860,22 +861,21 @@ def dashboard():
     parsed_over_time = collections.defaultdict(int)
     skill_freq = collections.defaultdict(int)
     
-    if activity_collection is not None:
-        all_activities = list(safe_find(activity_collection, {"user_id": user_id}))
-        for a in all_activities:
-            # Over time - group by YYYY-MM-DD
-            dt = a.get("upload_date")
-            if dt:
-                date_str = dt.strftime("%Y-%m-%d")
-                parsed_over_time[date_str] += 1
-            
-            # Missing Skills frequency
-            m_skills = a.get("missing_skills", [])
-            if isinstance(m_skills, list):
-                for skill in m_skills:
-                    if isinstance(skill, str) and len(skill) > 1:
-                        skill_freq[skill] += 1
-                        
+    all_activities = safe_find(activity_collection, {"user_id": user_id})
+    for a in all_activities:
+        # Over time - group by YYYY-MM-DD
+        dt = a.get("upload_date")
+        if dt:
+            date_str = dt.strftime("%Y-%m-%d")
+            parsed_over_time[date_str] += 1
+
+        # Missing Skills frequency
+        m_skills = a.get("missing_skills", [])
+        if isinstance(m_skills, list):
+            for skill in m_skills:
+                if isinstance(skill, str) and len(skill) > 1:
+                    skill_freq[skill] += 1
+
     # Sort dates chronologically
     sorted_dates = sorted(parsed_over_time.keys())
     chart_labels = sorted_dates[-7:] # Last 7 active days
@@ -1228,10 +1228,6 @@ def analytics():
     if not is_logged_in():
         return redirect(url_for("signin"))
     return render_template("analytics.html", page="analytics")
-
-
-    if not is_logged_in():
-        return redirect(url_for("signin"))
 
 
 @app.route("/settings")
