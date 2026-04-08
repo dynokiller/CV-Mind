@@ -55,7 +55,6 @@ COPY training/  ./training/
 COPY utils/     ./utils/
 COPY app/       ./app/
 COPY models/    ./models/
-COPY data/      ./data/
 
 # Non-root user for container security
 RUN useradd -m -u 1000 appuser \
