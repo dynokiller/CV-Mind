@@ -135,9 +135,10 @@
   const uploadBtn = document.getElementById("uploadBtn");
   const removeFile = document.getElementById("removeFile");
 
-  // click dropzone => open file chooser
+  // click dropzone => open file chooser (don't intercept the parse button)
   dropZone.addEventListener("click", (e) => {
-    if (e.target.closest(".remove-file") || e.target.closest("button")) return;
+    if (e.target.closest(".remove-file")) return;  // only block remove-file
+    if (e.target.closest(".parse-btn")) return;    // don't hijack submit button
     resumeInput.click();
   });
 
@@ -214,7 +215,8 @@
           return;
       }
 
-      setLoadingState("Extracting text...", true);
+      console.log("File selected:", file);
+      setLoadingState("⏳ Extracting text...", true);
 
       try {
           let extractedText = "";
@@ -238,8 +240,11 @@
               throw new Error("Could not extract readable text from the document.");
           }
 
-          // 3. API CALL
-          setLoadingState("Analyzing resume...", true);
+          // 3. DEBUG LOG
+          console.log("Extracted text (first 300 chars):", extractedText.substring(0, 300));
+
+          // 4. API CALL
+          setLoadingState("⏳ Analyzing resume...", true);
           
           const formData = new FormData();
           formData.append("inputs", extractedText);
@@ -262,7 +267,7 @@
           console.error("Processing failed:", error);
           alert(error.message);
       } finally {
-          setLoadingState('<i class="fa-solid fa-wand-magic-sparkles"></i> Upload & Parse Resume', false);
+          setLoadingState('<i class="fa-solid fa-wand-magic-sparkles"></i> Upload &amp; Parse Resume', false);
       }
   }
 
@@ -290,11 +295,17 @@
       return result.data.text;
   }
 
-  function setLoadingState(message, isDisabled) {
+  function setLoadingState(message, isLoading) {
       const btn = document.getElementById("uploadBtn");
       if (btn) {
           btn.innerHTML = message;
-          btn.disabled = isDisabled;
+          // When done loading, re-enable only if a file is still selected
+          if (!isLoading) {
+              const fileInput = document.getElementById("resumeInput");
+              btn.disabled = !(fileInput && fileInput.files.length > 0);
+          } else {
+              btn.disabled = true;
+          }
       }
   }
 
