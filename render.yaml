@@ -12,6 +12,25 @@ services:
       - key: MONGO_URI
         sync: false # Set this manually in Render dashboard to your Atlas string
 
+      # ── ML Feature Flags ─────────────────────────────────────────────────
+      # OCR: Enable text extraction for image-based and scanned-PDF resumes
+      - key: USE_OCR
+        value: "true"
+
+      # LinkedIn: Enable /linkedin-analyze endpoint (requires USE_LINKEDIN=true)
+      - key: USE_LINKEDIN
+        value: "false"
+
+      # Transformer Classifier: Use DistilBERT zero-shot instead of XGBoost
+      # Caution: downloads ~90 MB model on first boot; disable on free tier
+      - key: USE_TRANSFORMER_CLASSIFIER
+        value: "false"
+
+      # EasyOCR: Enable better-accuracy OCR engine (downloads ~150 MB models)
+      # Caution: only enable if Render plan has sufficient disk space
+      - key: USE_EASYOCR
+        value: "false"
+
   # 2. Flask Frontend Dashboard
   - type: web
     name: ai-resume-frontend

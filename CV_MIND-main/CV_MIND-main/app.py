@@ -1061,7 +1061,97 @@ def upload_resume():
             {"$set": {"avg_match_score": avg}}
         )
 
-    flash("Resume uploaded successfully ", "success")
+    flash("Resume uploaded processing...", "success")
+    return redirect(url_for("dashboard"))
+
+
+# ----------------------------
+# LinkedIn Profile Analysis
+# ----------------------------
+@app.route("/analyze-linkedin", methods=["POST"])
+def analyze_linkedin():
+    if not is_logged_in():
+        return redirect(url_for("signin"))
+
+    user_id = session["user_id"]
+    linkedin_text = request.form.get("linkedin_text", "").strip()
+    job_description = request.form.get("job_description", "").strip()
+
+    if not linkedin_text or len(linkedin_text) < 30:
+        flash("Please paste more LinkedIn profile content!", "error")
+        return redirect(url_for("upload"))
+
+    # Updated HF Space URL for API connection
+    parser_url = "https://dyno0126-resume.hf.space/predict"
+    
+    start_time = time.time()
+    try:
+        # 🚨 FastAPI expects Form-Data with "inputs", no JSON body
+        payload = {
+            "inputs": linkedin_text
+        }
+        
+        response = requests.post(parser_url, data=payload, timeout=120)
+        process_time = round(time.time() - start_time, 2)
+
+        if response.status_code == 200:
+            result = response.json()
+            
+            # Use 'predicted_domain' and 'confidence' per the FastAPI schema
+            predicted_domain = result.get("predicted_domain", "Unknown")
+            confidence = result.get("confidence", 0)
+            
+            # Extract top 2 for display in keywords logic if needed or fallback
+            all_probs = result.get("all_probabilities", {})
+            sorted_probs = sorted(all_probs.items(), key=lambda item: item[1], reverse=True)[:2]
+            top_skills_display = [f"{k} ({v*100:.1f}%)" for k, v in sorted_probs]
+            
+            # Store in session for immediate display
+            session['last_result'] = {
+                "name": result.get("name", "Candidate"),
+                "predicted_domain": predicted_domain,
+                "confidence": round(confidence * 100, 1),
+                "final_score": round(confidence * 100), # Using confidence as proxy for match score
+                "skills": result.get("skills", []), # Fallbacks
+                "experience": [],
+                "education": [],
+                "top_keywords": ", ".join(top_skills_display),
+                "latency_ms": process_time * 1000,
+                "backend": result.get("backend", "docker_fastapi"),
+                "type": "linkedin"  # Mark as LinkedIn result
+            }
+
+            # Update stats
+            if stats_collection is not None:
+                safe_update_one(stats_collection, 
+                    {"user_id": user_id},
+                    {
+                        "$inc": {"total_resumes": 1, "parsed_success": 1},
+                        "$set": {"processing_time": process_time, "updated_at": datetime.now()}
+                    },
+                    upsert=True
+                )
+            
+            # Add to activity
+            if activity_collection is not None:
+                safe_insert(activity_collection, {
+                    "user_id": user_id,
+                    "candidate_name": result.get("name", "Unknown"),
+                    "domain": result.get("predicted_domain", "Unknown"),
+                    "score": result.get("match_score", 0),
+                    "upload_date": datetime.now(),
+                    "status": "Success",
+                    "type": "linkedin",
+                    "file_name": "LinkedIn Parse"
+                })
+
+            flash("LinkedIn profile analyzed successfully!", "success")
+        else:
+            flash(f"LinkedIn analysis failed: {response.text}", "error")
+
+    except Exception as e:
+        flash(f"Error connecting to analyzer: {str(e)}", "error")
+
     return redirect(url_for("dashboard"))
 
 

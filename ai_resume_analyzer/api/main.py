@@ -4,10 +4,12 @@ api/main.py
 Production FastAPI application for the AI Resume Analyzer.
 
 Endpoints:
-  POST /analyze         — domain classification + match score + SHAP keywords
-  POST /feedback        — active learning: store domain corrections
-  POST /bulk-analyze    — rank N resumes by match score (recruiter mode)
-  POST /upload-analyze  — unify file parsing to V4 ML prediction flow
+  POST /analyze          — domain classification + match score + SHAP keywords
+  POST /feedback         — active learning: store domain corrections
+  POST /bulk-analyze     — rank N resumes by match score (recruiter mode)
+  POST /upload-analyze   — unified file parsing → V4 ML prediction flow
+  POST /linkedin-analyze — LinkedIn profile text → structured JSON + domain
+  GET  /flags            — inspect active feature flags
 
 All ML models are loaded ONCE at startup (lifespan hook).
 No ML objects are ever recreated per request.
@@ -24,13 +26,13 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import List
 
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
+from dotenv import load_dotenv
+load_dotenv()
+
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
-
-# MongoDB motor integration
-from motor.motor_asyncio import AsyncIOMotorClient
 
 # ── Set up logging before importing ML modules ────────────────────────────────
 logging.basicConfig(
@@ -39,14 +41,41 @@ logging.basicConfig(
 )
 logger = logging.getLogger("resume_analyzer")
 
+
+# ── Mail Service Imports ──────────────────────────────────────────────────────
+import smtplib
+from email.message import EmailMessage
+import sys
+# Add frontend mail handlers to path to reuse logic
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "CV_MIND-main", "CV_MIND-main"))
+try:
+    from mail_service.handlers import HANDLERS
+except ImportError:
+    HANDLERS = {}
+    logger.warning("[API] Could not import mail handlers from frontend directory.")
+
 # ── Import inference & app modules ───────────────────────────────────────────
-from inference.inference import predict_domain
+from inference.inference import predict_domain, get_feature_flags
 from inference.similarity import compute_match_score
 from inference.explain import explain_resume
 from inference.scoring_engine import calculate_score
 from app.models.resume_parser import parse_resume as extract_text
 from app.models.feature_extractor import extract_features
 from app.models.feedback_generator import generate_feedback
+
+# ── LinkedIn analyzer (lazy — only imported when USE_LINKEDIN=true) ───────────
+import os as _os
+_USE_LINKEDIN = _os.getenv("USE_LINKEDIN", "false").lower() == "true"
+if _USE_LINKEDIN:
+    try:
+        from app.models.linkedin_analyzer import parse_linkedin_profile
+        logger_tmp = logging.getLogger("resume_analyzer")
+        logger_tmp.info("[API] LinkedIn analyzer module loaded.")
+    except Exception as _e:
+        logging.getLogger("resume_analyzer").warning(f"[API] LinkedIn analyzer failed to import: {_e}")
+        parse_linkedin_profile = None
+else:
+    parse_linkedin_profile = None
 
 # ── Feedback CSV path ─────────────────────────────────────────────────────────
 FEEDBACK_CSV = "data/feedback_data.csv"
@@ -70,6 +99,19 @@ class AnalyzeResponse(BaseModel):
     matched_skills:   List[str]
     missing_skills:   List[str]
     latency_ms:       float
+
+
+# ── Mail Service Schemas ──────────────────────────────────────────────────────
+class MailRequest(BaseModel):
+    email: str
+    type: str
+    otp: str = None
+    redirect: str = None
+
+
+class MailResponse(BaseModel):
+    success: bool
+    message: str = None
 
 
 class FeedbackRequest(BaseModel):
@@ -113,6 +155,43 @@ class UploadAnalyzeResponse(BaseModel):
     suggestions: List[str]
     keywords: List[str]
     final_score: float
+
+
+# ── LinkedIn Schemas ──────────────────────────────────────────────────────────
+class LinkedInAnalyzeRequest(BaseModel):
+    linkedin_text:   str = Field(..., min_length=30, description="Pasted LinkedIn profile text")
+    job_description: str = Field(default="",          description="Optional JD for match scoring")
+
+
+class LinkedInExperience(BaseModel):
+    title:       str = ""
+    company:     str = ""
+    duration:    str = ""
+    description: str = ""
+
+
+class LinkedInEducation(BaseModel):
+    institution: str = ""
+    degree:      str = ""
+    field:       str = ""
+    year:        str = ""
+
+
+class LinkedInAnalyzeResponse(BaseModel):
+    name:             str
+    headline:         str
+    summary:          str
+    location:         str
+    skills:           List[str]
+    experience:       List[dict]
+    education:        List[dict]
+    certifications:   List[str]
+    languages:        List[str]
+    profile_strength: str
+    predicted_domain: str
+    domain_confidence: float
+    match_score:      float
+    latency_ms:       float
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -202,6 +281,7 @@ def health():
 
 
 @app.post("/upload-analyze", response_model=UploadAnalyzeResponse)
+@app.post("/parse", response_model=UploadAnalyzeResponse)
 async def upload_analyze(
     file: UploadFile = File(...),
     job_description: str = Form(default="")
@@ -426,6 +506,139 @@ async def bulk_analyze(body: BulkAnalyzeRequest):
         ranked_candidates = ranked,
         latency_ms        = latency,
     )
+
+
+# ── Mail Service Dispatcher ────────────────────────────────────────────────────
+@app.post("/mail_service/index", response_model=MailResponse)
+async def mail_dispatcher(request: Request):
+    """
+    Unified mail dispatcher ported from Flask mail service.
+    Handles OTP_VERIFY and RESET_PASSWORD types.
+    """
+    try:
+        data = await request.json()
+    except Exception:
+        return MailResponse(success=False, message="Invalid JSON payload")
+
+    email = data.get("email")
+    mail_type = data.get("type")
+
+    if not email or not mail_type:
+        return MailResponse(success=False, message="email and type required")
+
+    handler = HANDLERS.get(mail_type)
+    if not handler:
+        return MailResponse(success=False, message=f"Invalid mail type: {mail_type}")
+
+    # SMTP Config from ENV
+    mail_user = os.getenv("MAIL_EMAIL")
+    mail_pass = os.getenv("MAIL_APP_PASSWORD")
+    smtp_host = "smtp.gmail.com"
+    smtp_port = 465
+
+    if not mail_user or not mail_pass:
+        return MailResponse(success=False, message="Mail credentials not configured in backend ENV")
+
+    try:
+        # Build message using existing handler logic
+        msg = handler(data)
+        
+        # Dispatch via SMTP_SSL
+        with smtplib.SMTP_SSL(smtp_host, smtp_port) as smtp:
+            smtp.login(mail_user, mail_pass)
+            smtp.send_message(msg)
+            
+        logger.info(f"[MAIL] Sent {mail_type} to {email}")
+        return MailResponse(success=True, message="Email sent")
+
+    except Exception as e:
+        logger.error(f"[MAIL] Failed to send {mail_type} to {email}: {e}")
+        return MailResponse(success=False, message=str(e))
+
+
+# ── LinkedIn Analyze Endpoint ─────────────────────────────────────────────────
+@app.post("/linkedin-analyze", response_model=LinkedInAnalyzeResponse)
+async def linkedin_analyze(body: LinkedInAnalyzeRequest):
+    """
+    Parse a pasted LinkedIn profile and return structured data + domain prediction.
+
+    - Requires USE_LINKEDIN=true env var to enable LinkedIn parsing.
+    - Falls back to basic skill extraction from raw text if module unavailable.
+    - Optional: include job_description for match scoring.
+    """
+    t0 = time.time()
+
+    # ── LinkedIn parsing ──────────────────────────────────────────────────
+    if parse_linkedin_profile is not None:
+        try:
+            profile = parse_linkedin_profile(body.linkedin_text)
+            if "error" in profile:
+                raise HTTPException(status_code=400, detail=profile["error"])
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning(f"[/linkedin-analyze] Profile parse error: {e}")
+            profile = {}
+    else:
+        logger.warning(
+            "[/linkedin-analyze] LinkedIn module not loaded. "
+            "Set USE_LINKEDIN=true to enable full parsing."
+        )
+        profile = {}
+
+    # ── Domain classification ─────────────────────────────────────────────
+    try:
+        clf_result = predict_domain(body.linkedin_text)
+        predicted_domain   = clf_result["predicted_domain"]
+        domain_confidence  = clf_result["confidence"]
+    except Exception as e:
+        logger.warning(f"[/linkedin-analyze] Domain prediction error: {e}")
+        predicted_domain  = "UNKNOWN"
+        domain_confidence = 0.0
+
+    # ── Match scoring (optional) ──────────────────────────────────────────
+    match_score = 0.0
+    if body.job_description and len(body.job_description.strip()) > 20:
+        try:
+            sim = compute_match_score(body.linkedin_text, body.job_description)
+            match_score = sim.get("match_score_percent", 0.0)
+        except Exception as e:
+            logger.warning(f"[/linkedin-analyze] Match scoring error: {e}")
+
+    latency = round((time.time() - t0) * 1000, 2)
+
+    return LinkedInAnalyzeResponse(
+        name             = profile.get("name", "Unknown"),
+        headline         = profile.get("headline", ""),
+        summary          = profile.get("summary", ""),
+        location         = profile.get("location", ""),
+        skills           = profile.get("skills", []),
+        experience       = profile.get("experience", []),
+        education        = profile.get("education", []),
+        certifications   = profile.get("certifications", []),
+        languages        = profile.get("languages", []),
+        profile_strength = profile.get("profile_strength", "basic"),
+        predicted_domain = predicted_domain,
+        domain_confidence = domain_confidence,
+        match_score      = match_score,
+        latency_ms       = latency,
+    )
+
+
+# ── Feature Flags Introspection ───────────────────────────────────────────────
+@app.get("/flags")
+def flags():
+    """Return the current ML feature flags and their active state."""
+    f = get_feature_flags()
+    f["USE_LINKEDIN"] = _USE_LINKEDIN
+    return {
+        "flags": f,
+        "description": {
+            "USE_OCR":                    "Enable OCR for image/scanned-PDF resumes",
+            "USE_LINKEDIN":               "Enable /linkedin-analyze endpoint",
+            "USE_TRANSFORMER_CLASSIFIER": "Use DistilBERT zero-shot instead of XGBoost",
+        }
+    }
 
 
 if __name__ == "__main__":

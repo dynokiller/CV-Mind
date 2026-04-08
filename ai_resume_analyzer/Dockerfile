@@ -16,10 +16,12 @@ FROM python:3.11-slim AS builder
 
 WORKDIR /build
 
-# Install system build dependencies
+# Install Tesseract OCR
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential \
-        git \
+        tesseract-ocr \
+        tesseract-ocr-eng \
+        libglib2.0-0 \
+        libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
@@ -38,11 +40,20 @@ WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
+# Install Tesseract + OpenCV runtime system libraries
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        tesseract-ocr \
+        tesseract-ocr-eng \
+        libglib2.0-0 \
+        libgl1 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy application source
 COPY api/       ./api/
 COPY inference/ ./inference/
 COPY training/  ./training/
 COPY utils/     ./utils/
+COPY app/       ./app/
 COPY models/    ./models/
 COPY data/      ./data/
 

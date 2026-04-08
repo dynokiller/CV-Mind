@@ -9,23 +9,18 @@ V4 ML Pipeline: NLP Preprocessing & Data Cleaning
 """
 
 import re
-import pandas as pd
-import spacy
+import re
 
-# Ensure Spacy runs; will prompt download if missing in runtime
-try:
-    nlp = spacy.load("en_core_web_sm", disable=['ner', 'parser'])
-except OSError:
-    import subprocess
-    subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"])
-    nlp = spacy.load("en_core_web_sm", disable=['ner', 'parser'])
+# Dependency-free cleaning (replaces spaCy lemmatization)
+
+# Hard max chars for SpaCy processing — keeps inference fast
+SPACY_CHAR_LIMIT = 3000
 
 def clean_and_lemmatize(text: str) -> str:
     """
-    Advanced NLP Text Cleaner:
-    1. Removes HTML, Links, Special Chars.
-    2. Uses Spacy for Lemmatization ('managed' -> 'manage').
-    3. Removes Stop Words & Punctuation.
+    Simplified cleaning using regex (No spaCy dependency).
+    Focuses on tokenization, noise removal, and skill injection.
+    (Kept name for backward compatibility with inference.py).
     """
     text = str(text).lower()
     
@@ -36,53 +31,71 @@ def clean_and_lemmatize(text: str) -> str:
     # Remove URLs
     text = re.sub(r'http\S+|www\S+', ' ', text)
     
-    # Remove extremely long repetitive blocks or non-ascii
+    # Keep alphanumeric, separators, and special technical chars
     text = re.sub(r'[^a-zA-Z0-9\s.,+#\-]', ' ', text)
     
-    # SpaCy NLP Pipeline (Max char limit guard to prevent OOM)
-    # 6000 chars is ~1000 words. SentenceTransformers truncates at ~512 tokens anyway.
-    if len(text) > 6000:
-         text = text[:6000] 
-         
-    doc = nlp(text)
-    
-    cleaned_tokens = []
-    for token in doc:
-        # Keep alphabetic or specific tech symbols (c#, c++)
-        if (token.is_alpha or token.text in ['c++', 'c#', '.net']) and not token.is_stop and not token.is_punct:
-            if len(token.lemma_) > 1: # remove single stray letters
-                cleaned_tokens.append(token.lemma_)
+    # Tokenize and filter short noise/digits
+    tokens = text.split()
+    cleaned_tokens = [
+        t for t in tokens 
+        if (len(t) > 1 or t in ['c', 'r', 'c++', 'c#', '.net']) 
+        and not t.isdigit()
+    ]
                 
-    return " ".join(cleaned_tokens)
+    # Prepend structured skill signal (domain-specific keywords only)
+    structured_skills = extract_structured_skills(text)
+    
+    return structured_skills + " " + " ".join(cleaned_tokens)
 
 def extract_structured_skills(text: str) -> str:
     """
-    Extracts explicit hard-skills or tech to inject heavily back into the top of the text.
-    Ensures embeddings heavily weigh these terms.
+    Injects explicitly found hard-skills at the START of the text so TF-IDF
+    heavily weights them. 
+
+    IMPORTANT: Only include PROFESSIONAL SKILLS here — NOT domain names like
+    'agriculture' or 'aviation' that could confuse the classifier when they 
+    appear in non-domain contexts (e.g., a CS student's research project 
+    mentioning 'sustainable agriculture').
     """
-    # Simplified list for demo; in production this is driven by a massive dictionary
     tech_keywords = {
-        'python', 'java', 'sql', 'react', 'node', 'aws', 'docker', 'kubernetes', 'ml', 
-        'machine learning', 'data analysis', 'finance', 'accounting', 'sales', 
-        'marketing', 'seo', 'design', 'photoshop', 'figma', 'agriculture', 'bpo', 
-        'manufacturing', 'cad', 'autocad', 'hr', 'recruitment'
+        # Programming
+        'python', 'java', 'javascript', 'typescript', 'sql', 'react', 'node',
+        'aws', 'docker', 'kubernetes', 'pytorch', 'tensorflow', 'keras',
+        # IT / Cyber Security — these are professional skills, not domain names
+        'cyber', 'security', 'network', 'penetration testing', 'vulnerability',
+        'cissp', 'siem', 'firewall', 'wireshark', 'metasploit', 'kali',
+        'owasp', 'burp suite', 'nmap', 'cryptography', 'ethical hacking',
+        'ccna', 'ansible', 'openid', 'oauth', 'jwt',
+        # Data/AI
+        'machine learning', 'deep learning', 'nlp', 'data science',
+        'computer vision', 'llm', 'generative ai', 'transformers',
+        # Web
+        'html', 'css', 'rest', 'api',
+        # Finance/Business
+        'finance', 'accounting', 'sales', 'marketing',
+        # Design
+        'figma', 'photoshop', 'ui', 'ux',
+        # HR
+        'recruitment', 'hr', 'human resources',
+        # Manufacturing
+        'cad', 'autocad', 'catia',
+        # BPO / Customer
+        'bpo', 'crm', 'customer service',
     }
     
     found_skills = []
     text_lower = text.lower()
-    for skill in tech_keywords:
+    for skill in sorted(tech_keywords):  # sorted for determinism
         if re.search(r'\b' + re.escape(skill) + r'\b', text_lower):
             found_skills.append(skill)
             
-    # Return formatted block like "SKILLS: python java docker"
     if found_skills:
-        return "EXTRACTED_SKILLS_BLOCK: " + " ".join(found_skills) + " | "
+        return "SKILLS: " + " ".join(found_skills) + " | "
     return ""
 
 def generate_synthetic_resumes(category: str, count: int = 5) -> list:
     """
-    Generates realistic variations of resumes for critically underrepresented categories
-    to give SMOTE a wider variance baseline before mathematical interpolation.
+    Generates realistic variations of resumes for critically underrepresented categories.
     """
     templates = {
         "AGRICULTURE": [
@@ -109,7 +122,6 @@ def generate_synthetic_resumes(category: str, count: int = 5) -> list:
     synthetics = []
     
     for i in range(count):
-        # Slightly alter the template round-robin to simulate unique resumes
         base = base_templates[i % len(base_templates)]
         synthetics.append(f"Synthetic Template Variation {i}: " + base)
         
