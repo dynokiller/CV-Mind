@@ -1,5 +1,10 @@
 from flask import Flask, render_template, redirect, url_for, request, session, flash, make_response, jsonify
-from db import user_collection, stats_collection, activity_collection, file_integrity_collection, reset_tokens_collection   
+# Database collections replaced with in-memory lists (stateless)
+user_collection = []
+stats_collection = []
+activity_collection = []
+file_integrity_collection = []
+reset_tokens_collection = []
 from itsdangerous import URLSafeTimedSerializer
 from werkzeug.security import generate_password_hash, check_password_hash
 from authlib.integrations.flask_client import OAuth
@@ -61,29 +66,50 @@ IST = ZoneInfo("Asia/Kolkata")
 now_ist = datetime.now(IST)
 
 def safe_find_one(collection, query):
-    if collection is not None:
-        return collection.find_one(query)
+    if collection is None or not isinstance(collection, list):
+        return None
+    for item in collection:
+        match = True
+        for k, v in query.items():
+            if item.get(k) != v:
+                match = False
+                break
+        if match:
+            return item
     return None
 
 def safe_insert(collection, data):
-    if collection is not None:
-        collection.insert_one(data)
+    if collection is not None and isinstance(collection, list):
+        if "_id" not in data:
+            data["_id"] = str(uuid.uuid4())
+        collection.append(data)
     else:
         print("Skipping DB insert")
 
 def safe_update_one(collection, query, update, **kwargs):
-    if collection is not None:
-        return collection.update_one(query, update, **kwargs)
+    if collection is not None and isinstance(collection, list):
+        item = safe_find_one(collection, query)
+        if item:
+            if "$set" in update:
+                item.update(update["$set"])
+            if "$unset" in update:
+                for k in update["$unset"]:
+                    item.pop(k, None)
+        return item
     return None
 
 def safe_delete_many(collection, query):
-    if collection is not None:
-        return collection.delete_many(query)
+    if collection is not None and isinstance(collection, list):
+        to_remove = [item for item in collection if all(item.get(k) == v for k, v in query.items())]
+        for item in to_remove:
+            collection.remove(item)
+        return len(to_remove)
     return None
 
 def safe_find(collection, *args, **kwargs):
-    if collection is not None:
-        return collection.find(*args, **kwargs)
+    if collection is not None and isinstance(collection, list):
+        query = args[0] if args else {}
+        return [item for item in collection if all(item.get(k) == v for k, v in query.items())]
     return []
 
 def is_logged_in():
