@@ -262,9 +262,14 @@
           }
 
           const data = await response.json();
+          console.log("FULL API RESPONSE:", data);
 
           // 4. DISPLAY RESPONSE
-          renderOutput(data);
+          try {
+              renderOutput(data);
+          } catch (renderError) {
+              console.error("Render failed:", renderError);
+          }
 
       } catch (error) {
           console.error("Processing failed:", error);
@@ -313,25 +318,33 @@
   }
 
   function renderOutput(data) {
+      console.log("Rendering data:", data);
       const container = document.getElementById("results-container");
       if (!container) return;
 
-      const confidencePct = (data.confidence * 100).toFixed(1) + "%";
-      
-      const sortedProbs = Object.entries(data.all_probabilities || {})
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 2);
+      const domain = data.predicted_domain || data.prediction || "Unknown";
+      const confidence = data.confidence 
+          ? (data.confidence * 100).toFixed(1) + "%" 
+          : "N/A";
 
-      let statsList = sortedProbs.map(([domain, p]) => 
-          `<li style="margin-bottom: 4px;">${domain} - <span style="font-weight: bold; color: #60a5fa;">${(p * 100).toFixed(1)}%</span></li>`
-      ).join("");
+      let statsList = "";
+      if (data.all_probabilities) {
+          const sorted = Object.entries(data.all_probabilities)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 2);
+
+          statsList = sorted.map(([d, p]) =>
+              `<li>${d} - ${(p * 100).toFixed(1)}%</li>`
+          ).join("");
+      }
 
       container.innerHTML = `
-          <h4 style="color: #60a5fa; margin-bottom: 12px;"><i class="fa-solid fa-check-circle"></i> Analysis Complete</h4>
-          <p style="margin-bottom: 8px;"><strong>Predicted Domain:</strong> <span style="color:#2ecc71; font-weight: bold;">${data.predicted_domain}</span></p>
-          <p style="margin-bottom: 8px;"><strong>Confidence:</strong> ${confidencePct}</p>
-          ${statsList ? `<p style="margin-top: 12px; margin-bottom: 4px;"><strong>Top Probabilities:</strong></p><ul style="list-style-type: none; padding-left: 0;">${statsList}</ul>` : ""}
+          <h4 style="color:#2ecc71; margin-bottom: 12px;"><i class="fa-solid fa-check-circle"></i> Analysis Complete</h4>
+          <p><strong>Domain:</strong> ${domain}</p>
+          <p><strong>Confidence:</strong> ${confidence}</p>
+          ${statsList ? `<p style="margin-top: 12px; margin-bottom: 4px;"><strong>Top Probabilities:</strong></p><ul>${statsList}</ul>` : ""}
       `;
+
       container.style.display = "block";
   }
 </script>
