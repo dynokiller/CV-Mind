@@ -249,10 +249,13 @@
           const formData = new FormData();
           formData.append("inputs", extractedText);
 
+          console.log('About to send POST request to API');
           const response = await fetch("https://dyno0126-resume.hf.space/predict", {
               method: "POST",
               body: formData
           });
+          console.log('Fetch completed, status:', response.status);
+
 
           if (!response.ok) {
               throw new Error(`API Error: ${response.status}`);
