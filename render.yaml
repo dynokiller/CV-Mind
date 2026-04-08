@@ -45,7 +45,7 @@ services:
       - key: PARSERAI_URL
         # This dynamically injects the backend's Render URL + the endpoint path
         value: https://ai-resume-backend.onrender.com/upload-analyze
-      - key: MONGO_URL
+      - key: MONGO_URI
         sync: false # Put the same Mongo URI string as the backend
       - key: FLASK_SECRET_KEY
         generateValue: true
