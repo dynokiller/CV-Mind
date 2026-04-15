@@ -853,8 +853,8 @@ def dashboard():
     if stats.get("total_resumes", 0) > 0:
         parsed_percent = round((stats.get("parsed_success", 0) / stats["total_resumes"]) * 100)
 
-    # Allow fallback UI display
-    last_result = session.pop('last_result', None)
+    # Keep latest analysis visible across dashboard refreshes.
+    last_result = session.get("last_result")
 
     # Prepare data for charts
     import collections
@@ -910,6 +910,99 @@ def upload():
     if not is_logged_in():
         return redirect(url_for("signin"))
     return render_template("upload.html", page="upload")
+
+
+@app.route("/store-analysis-result", methods=["POST"])
+def store_analysis_result():
+    if not is_logged_in():
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    user_id = session["user_id"]
+    payload = request.get_json(silent=True) or {}
+
+    predicted_domain = payload.get("predicted_domain", "Unknown")
+    confidence_raw = payload.get("confidence", 0)
+    all_probabilities = payload.get("all_probabilities", {})
+    missing_keywords = payload.get("missing_keywords", [])
+    suggestions = payload.get("suggestions", [])
+    top_keywords = payload.get("top_keywords", [])
+    final_score = payload.get("final_score")
+
+    try:
+        confidence = round(float(confidence_raw) * 100, 1)
+    except (TypeError, ValueError):
+        confidence = 0.0
+
+    if final_score is None:
+        final_score = round(confidence)
+
+    if not isinstance(missing_keywords, list):
+        missing_keywords = []
+    if not isinstance(suggestions, list):
+        suggestions = []
+    if not isinstance(top_keywords, list):
+        top_keywords = []
+    if not isinstance(all_probabilities, dict):
+        all_probabilities = {}
+
+    feedback = "\n".join(suggestions)
+
+    # Save for dashboard card (trim to avoid cookie overflow).
+    session["last_result"] = {
+        "name": session.get("name", "User"),
+        "predicted_domain": predicted_domain,
+        "confidence": confidence,
+        "final_score": final_score,
+        "feedback": feedback[:500],
+        "missing_skills": missing_keywords[:10],
+        "missing_keywords": missing_keywords[:15],
+        "top_keywords": ", ".join(top_keywords[:8]),
+        "strengths": [],
+        "suggestions": suggestions[:8],
+        "all_probabilities": all_probabilities,
+        "latency_ms": payload.get("latency_ms", 0),
+        "type": "resume",
+    }
+
+    # Add activity for dashboard table/charts.
+    if activity_collection is not None:
+        safe_insert(
+            activity_collection,
+            {
+                "user_id": user_id,
+                "candidate_name": session.get("name", "User"),
+                "name": session.get("name", "User"),
+                "email": session.get("user_email", ""),
+                "domain": predicted_domain,
+                "score": final_score,
+                "feedback": feedback,
+                "missing_skills": missing_keywords[:10],
+                "upload_date": datetime.now(),
+                "status": "Success",
+                "match_score": final_score,
+                "file_name": payload.get("file_name", "Client Upload"),
+            },
+        )
+
+    process_time = 0
+    try:
+        latency_ms = float(payload.get("latency_ms", 0) or 0)
+        process_time = round(latency_ms / 1000, 2)
+    except (TypeError, ValueError):
+        process_time = 0
+
+    if stats_collection is not None:
+        safe_update_one(
+            stats_collection,
+            {"user_id": user_id},
+            {
+                "$inc": {"total_resumes": 1, "parsed_success": 1},
+                "$set": {"processing_time": process_time, "updated_at": datetime.now()},
+            },
+            upsert=True,
+        )
+
+    return jsonify({"status": "ok"})
 
 
 # ----------------------------

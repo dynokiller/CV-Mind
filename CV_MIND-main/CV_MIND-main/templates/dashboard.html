@@ -121,6 +121,19 @@
       </div>
     </div>
   {% else %}
+    {% if last_result.all_probabilities %}
+    <div style="margin-bottom: 14px;">
+      <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Top Probabilities</p>
+      <div style="display:flex; flex-wrap:wrap; gap:8px;">
+        {% for domain, prob in last_result.all_probabilities|dictsort(by='value', reverse=True)[:3] %}
+          <span style="display:inline-block; background:rgba(82,113,255,0.15); color:#60a5fa; padding:4px 10px; border-radius:12px; font-size:0.82rem;">
+            {{ domain }} - {{ (prob * 100)|round(1) }}%
+          </span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Row 2: Top Keywords -->
     {% if last_result.top_keywords %}
     <div style="margin-bottom: 14px;">
@@ -131,7 +144,7 @@
     </div>
     {% endif %}
 
-    <!-- Row 3: Strengths + Improvements -->
+    <!-- Row 3: Strengths + Missing Keywords -->
     <div style="display:flex; gap:16px; flex-wrap:wrap;">
       {% if last_result.strengths %}
       <div style="flex:1; min-width:260px;">
@@ -141,10 +154,10 @@
         {% endfor %}
       </div>
       {% endif %}
-      {% if last_result.missing_skills %}
+      {% if last_result.missing_keywords or last_result.missing_skills %}
       <div style="flex:1; min-width:260px;">
-        <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">💡 Areas to Improve</p>
-        {% for skill in last_result.missing_skills %}
+        <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">⚠ Missing Keywords</p>
+        {% for skill in (last_result.missing_keywords or last_result.missing_skills) %}
           <span style="display:inline-block; background:rgba(231,76,60,0.15); color:#e74c3c; padding:3px 10px; border-radius:12px; font-size:0.82rem; margin:2px;">{{ skill }}</span>
         {% else %}
           <span style="color:#2ecc71; font-size:0.85rem;">None — great resume!</span>
@@ -152,6 +165,17 @@
       </div>
       {% endif %}
     </div>
+
+    {% if last_result.suggestions %}
+    <div style="margin-top: 14px;">
+      <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">🛠 What Can Be Improved</p>
+      <ul style="margin-left: 18px; color: #cbd5e1; line-height: 1.6;">
+        {% for suggestion in last_result.suggestions %}
+          <li>{{ suggestion }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
   {% endif %}
 
   <p style="text-align:right; color:#475569; font-size:0.75rem; margin-top:12px;">

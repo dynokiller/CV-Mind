@@ -264,12 +264,44 @@
           const data = await response.json();
           console.log("FULL API RESPONSE:", data);
 
-          // 4. DISPLAY RESPONSE
-          try {
-              renderOutput(data);
-          } catch (renderError) {
-              console.error("Render failed:", renderError);
+          // 5. Persist result on backend, then show it on dashboard.
+          const sortedProbabilities = data.all_probabilities
+              ? Object.entries(data.all_probabilities).sort((a, b) => b[1] - a[1])
+              : [];
+
+          const topKeywords = data.keywords && Array.isArray(data.keywords)
+              ? data.keywords
+              : sortedProbabilities.slice(0, 5).map(([domain]) => domain);
+
+          const missingKeywords = data.missing_skills && Array.isArray(data.missing_skills)
+              ? data.missing_skills
+              : (data.missing_keywords && Array.isArray(data.missing_keywords) ? data.missing_keywords : []);
+
+          const suggestions = data.suggestions && Array.isArray(data.suggestions)
+              ? data.suggestions
+              : (data.improvements && Array.isArray(data.improvements) ? data.improvements : []);
+
+          const storeResponse = await fetch("{{ url_for('store_analysis_result') }}", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                  file_name: file.name,
+                  predicted_domain: data.predicted_domain || data.prediction || "Unknown",
+                  confidence: data.confidence || 0,
+                  all_probabilities: data.all_probabilities || {},
+                  top_keywords: topKeywords,
+                  missing_keywords: missingKeywords,
+                  suggestions: suggestions,
+                  final_score: data.final_score || Math.round((data.confidence || 0) * 100),
+                  latency_ms: data.latency_ms || 0
+              })
+          });
+
+          if (!storeResponse.ok) {
+              throw new Error("Could not save analysis for dashboard.");
           }
+
+          window.location.href = "{{ url_for('dashboard') }}";
 
       } catch (error) {
           console.error("Processing failed:", error);
@@ -317,43 +349,6 @@
       }
   }
 
-  function renderOutput(data) {
-      console.log("Rendering data:", data);
-      const container = document.getElementById("results-container");
-      if (!container) return;
-
-      const domain = data.predicted_domain || data.prediction || "Unknown";
-      const confidence = data.confidence 
-          ? (data.confidence * 100).toFixed(1) + "%" 
-          : "N/A";
-
-      let statsList = "";
-      if (data.all_probabilities) {
-          const sorted = Object.entries(data.all_probabilities)
-              .sort((a, b) => b[1] - a[1])
-              .slice(0, 2);
-
-          statsList = sorted.map(([d, p]) =>
-              `<li>${d} - ${(p * 100).toFixed(1)}%</li>`
-          ).join("");
-      }
-
-      container.innerHTML = `
-          <h4 style="color:#2ecc71; margin-bottom: 12px;"><i class="fa-solid fa-check-circle"></i> Analysis Complete</h4>
-          <p><strong>Domain:</strong> ${domain}</p>
-          <p><strong>Confidence:</strong> ${confidence}</p>
-          ${statsList ? `<p style="margin-top: 12px; margin-bottom: 4px;"><strong>Top Probabilities:</strong></p><ul>${statsList}</ul>` : ""}
-      `;
-
-      // Force Visibility Fixes
-      container.style.display = "block";
-      container.style.visibility = "visible";
-      container.style.opacity = "1";
-      container.style.border = "2px solid red"; // Temporary Debug Border
-      
-      // Auto Scroll
-      container.scrollIntoView({ behavior: "smooth" });
-  }
 </script>
 
 {% endblock %}
