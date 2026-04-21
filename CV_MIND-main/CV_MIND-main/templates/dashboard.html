@@ -178,6 +178,15 @@
       </ul>
     </div>
     {% endif %}
+
+    {% if last_result.boost_keywords %}
+    <div style="margin-top: 14px;">
+      <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">🚀 Keywords To Increase Resume Score</p>
+      {% for kw in last_result.boost_keywords %}
+        <span style="display:inline-block; background:rgba(46,204,113,0.15); color:#2ecc71; padding:3px 10px; border-radius:12px; font-size:0.82rem; margin:2px;">{{ kw }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
   {% endif %}
 
   <p style="text-align:right; color:#475569; font-size:0.75rem; margin-top:12px;">

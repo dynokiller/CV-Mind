@@ -57,7 +57,13 @@ except ImportError:
 # ── Import inference & app modules ───────────────────────────────────────────
 from inference.inference import predict_domain, get_feature_flags
 from inference.similarity import compute_match_score
-from inference.explain import explain_resume
+try:
+    from inference.explain import explain_resume
+except Exception as explain_import_error:
+    logger.warning(f"[API] SHAP explain module unavailable: {explain_import_error}")
+
+    def explain_resume(*args, **kwargs):
+        return {"top_keywords": []}
 from inference.scoring_engine import calculate_score
 from app.models.resume_parser import parse_resume as extract_text
 from app.models.feature_extractor import extract_features

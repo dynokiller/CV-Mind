@@ -144,6 +144,121 @@ def generate_google_password(full_name: str) -> str:
     return f"{clean_name}@{random_digits}"
 
 
+def refine_domain_label(raw_domain: str, resume_text: str = "", skills=None) -> str:
+    """
+    Convert broad domain labels (e.g., Engineering) into role-level domains
+    using full resume text and extracted skills.
+    """
+    if not raw_domain:
+        raw_domain = "Unknown"
+
+    skills = skills or []
+    text = f"{resume_text} {' '.join(skills)}".lower()
+    base = raw_domain.strip()
+
+    if base.lower() != "engineering":
+        return base
+
+    role_keywords = [
+        (
+            "Cyber Security",
+            [
+                "cyber security", "cybersecurity", "soc", "siem", "splunk",
+                "vulnerability", "penetration testing", "pentest", "owasp",
+                "incident response", "network security", "nmap", "burp suite",
+            ],
+        ),
+        (
+            "Software Engineer",
+            [
+                "software engineer", "software developer", "backend", "frontend",
+                "full stack", "api", "microservices", "django", "flask",
+                "spring boot", "react", "node", "typescript", "java",
+                "python", "c++", "git", "rest",
+            ],
+        ),
+        (
+            "Data Scientist",
+            [
+                "data scientist", "machine learning", "deep learning", "nlp",
+                "xgboost", "pytorch", "tensorflow", "scikit", "pandas",
+                "model training", "feature engineering",
+            ],
+        ),
+        (
+            "DevOps Engineer",
+            [
+                "devops", "kubernetes", "docker", "jenkins", "ci/cd", "terraform",
+                "ansible", "aws", "azure", "gcp", "monitoring", "prometheus",
+            ],
+        ),
+        (
+            "QA Engineer",
+            [
+                "qa engineer", "quality assurance", "test automation", "selenium",
+                "cypress", "postman", "jmeter", "unit testing", "integration testing",
+            ],
+        ),
+    ]
+
+    best_label = "Engineering"
+    best_score = 0
+    for label, keywords in role_keywords:
+        score = sum(1 for kw in keywords if kw in text)
+        if score > best_score:
+            best_score = score
+            best_label = label
+
+    return best_label
+
+
+def get_boost_keywords_for_domain(predicted_domain: str, missing_skills=None):
+    """
+    Recommend high-impact keywords that generally improve ATS/domain match.
+    Missing skills are prioritized first.
+    """
+    missing_skills = missing_skills or []
+    domain = (predicted_domain or "").strip().lower()
+
+    keyword_bank = {
+        "cyber security": [
+            "SIEM", "SOC", "Incident Response", "Vulnerability Assessment",
+            "OWASP", "Penetration Testing", "Nmap", "Burp Suite",
+            "Threat Modeling", "IAM",
+        ],
+        "software engineer": [
+            "Data Structures", "System Design", "REST APIs", "Microservices",
+            "Git", "Unit Testing", "CI/CD", "Docker", "SQL", "Cloud",
+        ],
+        "data scientist": [
+            "Machine Learning", "Feature Engineering", "Model Evaluation",
+            "Python", "Pandas", "Scikit-learn", "TensorFlow", "SQL",
+            "A/B Testing", "Statistics",
+        ],
+        "devops engineer": [
+            "Kubernetes", "Docker", "Terraform", "CI/CD", "Jenkins",
+            "Monitoring", "Prometheus", "AWS", "Linux", "Ansible",
+        ],
+        "qa engineer": [
+            "Test Automation", "Selenium", "Cypress", "API Testing",
+            "Postman", "Regression Testing", "Test Cases", "CI/CD",
+            "JIRA", "Performance Testing",
+        ],
+    }
+
+    defaults = [
+        "Quantified Impact", "Cross-functional Collaboration", "Ownership",
+        "Problem Solving", "Communication",
+    ]
+
+    recommended = keyword_bank.get(domain, defaults)
+    merged = []
+    for kw in (missing_skills[:8] + recommended):
+        if isinstance(kw, str) and kw and kw not in merged:
+            merged.append(kw)
+    return merged[:12]
+
+
 def create_initial_stats(user_id: str):
     if stats_collection is None:
         return
@@ -920,7 +1035,7 @@ def store_analysis_result():
     user_id = session["user_id"]
     payload = request.get_json(silent=True) or {}
 
-    predicted_domain = payload.get("predicted_domain", "Unknown")
+    raw_domain = payload.get("predicted_domain", "Unknown")
     confidence_raw = payload.get("confidence", 0)
     all_probabilities = payload.get("all_probabilities", {})
     missing_keywords = payload.get("missing_keywords", [])
@@ -946,6 +1061,12 @@ def store_analysis_result():
         all_probabilities = {}
 
     feedback = "\n".join(suggestions)
+    predicted_domain = refine_domain_label(
+        raw_domain=raw_domain,
+        resume_text=payload.get("full_resume_text", ""),
+        skills=top_keywords,
+    )
+    boost_keywords = get_boost_keywords_for_domain(predicted_domain, missing_keywords)
 
     # Save for dashboard card (trim to avoid cookie overflow).
     session["last_result"] = {
@@ -959,6 +1080,7 @@ def store_analysis_result():
         "top_keywords": ", ".join(top_keywords[:8]),
         "strengths": [],
         "suggestions": suggestions[:8],
+        "boost_keywords": boost_keywords,
         "all_probabilities": all_probabilities,
         "latency_ms": payload.get("latency_ms", 0),
         "type": "resume",
@@ -1089,11 +1211,12 @@ def upload_resume():
             result = response.json()
             status = "Success"
 
-            predicted_domain = result.get("predicted_domain", "Unknown")
+            raw_domain = result.get("predicted_domain", "Unknown")
             confidence = result.get("confidence", 0)
             
             strengths = result.get("skills_found", [])
             missing_skills = result.get("missing_skills", [])
+            extracted_text = result.get("full_resume_text", "")
             
             suggestions = result.get("suggestions", [])
             feedback = "\n".join(suggestions)
@@ -1102,6 +1225,12 @@ def upload_resume():
             keyword_str = ", ".join(keywords_list[:5])
             
             match_score = result.get("final_score", 0)
+            predicted_domain = refine_domain_label(
+                raw_domain=raw_domain,
+                resume_text=extracted_text,
+                skills=strengths,
+            )
+            boost_keywords = get_boost_keywords_for_domain(predicted_domain, missing_skills)
 
             candidate_name = user_name
             candidate_email = session.get("user_email", "")
@@ -1116,6 +1245,7 @@ def upload_resume():
                 "missing_skills": missing_skills[:10],
                 "top_keywords": keyword_str,
                 "strengths": strengths[:10],
+                "boost_keywords": boost_keywords,
                 "latency_ms": result.get("latency_ms", 0),
             }
 

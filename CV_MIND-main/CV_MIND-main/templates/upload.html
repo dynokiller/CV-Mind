@@ -1,16 +1,6 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<!-- Added Extraction Libraries -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-
-<style>
-  /* Optional: Loading Animation Styles */
-  #results-container { display: none; margin-top: 15px; padding: 15px; border-radius: 8px; background: rgba(82,113,255,0.1); border: 1px solid rgba(82,113,255,0.3); }
-</style>
-
 <div class="upload-tabs" style="display: flex; gap: 20px; margin-bottom: 25px; border-bottom: 1px solid rgba(148, 163, 184, 0.2); padding-bottom: 10px;">
   <button class="tab-btn active" onclick="switchTab('resume-tab')" id="resume-btn" style="background: none; border: none; color: var(--accent); font-weight: bold; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid var(--accent); transition: 0.3s; font-size: 1.1rem;">
     <i class="fa-solid fa-file-pdf"></i> Resume Upload
@@ -26,8 +16,8 @@
       <h2><i class="fa-solid fa-cloud-arrow-up"></i> Resume Upload</h2>
       <p>Upload your resume (PDF / DOCX). Max file size: 28MB</p>
 
-      <!-- ✅ Client-side upload form (bypasses Flask for parsing) -->
-      <form id="resumeUploadForm" class="upload-form" onsubmit="event.preventDefault(); handleResumeUpload();">
+      <!-- Server-side upload form for full-document parsing -->
+      <form id="resumeUploadForm" class="upload-form" action="{{ url_for('upload_resume') }}" method="POST" enctype="multipart/form-data">
         <input type="file" id="resumeInput" name="resume" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" hidden required>
         
         <div class="jd-section" style="margin-top: 15px; margin-bottom: 20px; text-align: left;">
@@ -52,8 +42,6 @@
         </div>
       </form>
 
-      <!-- Client-side Results Container -->
-      <div id="results-container"></div>
     </div>
 
     <div class="upload-right">
@@ -198,156 +186,18 @@
     resumeInput.value = "";
     filePreview.style.display = "none";
     uploadBtn.disabled = true;
-    document.getElementById("results-container").style.display = "none";
   });
 
-  // -------------------------------------------------------------
-  // AI Resume Analyzer Client-Side Logic
-  // -------------------------------------------------------------
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-
-  async function handleResumeUpload() {
-      const fileInput = document.getElementById("resumeInput");
-      const file = fileInput.files[0];
-
-      if (!file) {
-          alert("Please provide a resume file.");
-          return;
-      }
-
-      console.log("File selected:", file);
-      setLoadingState("⏳ Extracting text...", true);
-
-      try {
-          let extractedText = "";
-          const fileType = file.type;
-          const fileName = file.name.toLowerCase();
-
-          // 1. DETECT AND EXTRACT
-          if (fileType === "application/pdf" || fileName.endsWith(".pdf")) {
-              extractedText = await extractPdf(file);
-          } else if (fileType.includes("document") || fileName.endsWith(".docx")) {
-              extractedText = await extractDocx(file);
-          } else if (fileType.startsWith("image/") || /\.(png|jpg|jpeg)$/.test(fileName)) {
-              extractedText = await extractImage(file);
-          } else {
-              throw new Error("Unsupported format. Use PDF, DOCX, or JPG/PNG.");
-          }
-
-          // 2. CLEAN TEXT
-          extractedText = extractedText.trim();
-          if (!extractedText || extractedText.length < 30) {
-              throw new Error("Could not extract readable text from the document.");
-          }
-
-          // 3. DEBUG LOG
-          console.log("Extracted text (first 300 chars):", extractedText.substring(0, 300));
-
-          // 4. API CALL
-          setLoadingState("⏳ Analyzing resume...", true);
-          
-          const formData = new FormData();
-          formData.append("inputs", extractedText);
-
-          console.log('About to send POST request to API');
-          const response = await fetch("https://dyno0126-resume.hf.space/predict", {
-              method: "POST",
-              body: formData
-          });
-          console.log('Fetch completed, status:', response.status);
-
-
-          if (!response.ok) {
-              throw new Error(`API Error: ${response.status}`);
-          }
-
-          const data = await response.json();
-          console.log("FULL API RESPONSE:", data);
-
-          // 5. Persist result on backend, then show it on dashboard.
-          const sortedProbabilities = data.all_probabilities
-              ? Object.entries(data.all_probabilities).sort((a, b) => b[1] - a[1])
-              : [];
-
-          const topKeywords = data.keywords && Array.isArray(data.keywords)
-              ? data.keywords
-              : sortedProbabilities.slice(0, 5).map(([domain]) => domain);
-
-          const missingKeywords = data.missing_skills && Array.isArray(data.missing_skills)
-              ? data.missing_skills
-              : (data.missing_keywords && Array.isArray(data.missing_keywords) ? data.missing_keywords : []);
-
-          const suggestions = data.suggestions && Array.isArray(data.suggestions)
-              ? data.suggestions
-              : (data.improvements && Array.isArray(data.improvements) ? data.improvements : []);
-
-          const storeResponse = await fetch("{{ url_for('store_analysis_result') }}", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                  file_name: file.name,
-                  predicted_domain: data.predicted_domain || data.prediction || "Unknown",
-                  confidence: data.confidence || 0,
-                  all_probabilities: data.all_probabilities || {},
-                  top_keywords: topKeywords,
-                  missing_keywords: missingKeywords,
-                  suggestions: suggestions,
-                  final_score: data.final_score || Math.round((data.confidence || 0) * 100),
-                  latency_ms: data.latency_ms || 0
-              })
-          });
-
-          if (!storeResponse.ok) {
-              throw new Error("Could not save analysis for dashboard.");
-          }
-
-          window.location.href = "{{ url_for('dashboard') }}";
-
-      } catch (error) {
-          console.error("Processing failed:", error);
-          alert(error.message);
-      } finally {
-          setLoadingState('<i class="fa-solid fa-wand-magic-sparkles"></i> Upload &amp; Parse Resume', false);
-      }
-  }
-
-  async function extractPdf(file) {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let fullText = "";
-      
-      for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          fullText += textContent.items.map(item => item.str).join(" ") + " ";
-      }
-      return fullText;
-  }
-
-  async function extractDocx(file) {
-      const arrayBuffer = await file.arrayBuffer();
-      const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-      return result.value;
-  }
-
-  async function extractImage(file) {
-      const result = await Tesseract.recognize(file, 'eng');
-      return result.data.text;
-  }
-
-  function setLoadingState(message, isLoading) {
-      const btn = document.getElementById("uploadBtn");
-      if (btn) {
-          btn.innerHTML = message;
-          // When done loading, re-enable only if a file is still selected
-          if (!isLoading) {
-              const fileInput = document.getElementById("resumeInput");
-              btn.disabled = !(fileInput && fileInput.files.length > 0);
-          } else {
-              btn.disabled = true;
-          }
-      }
-  }
+  const resumeUploadForm = document.getElementById("resumeUploadForm");
+  resumeUploadForm.addEventListener("submit", (e) => {
+    if (!resumeInput.files.length) {
+      e.preventDefault();
+      alert("Please provide a resume file.");
+      return;
+    }
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Parsing full resume...';
+  });
 
 </script>
 
