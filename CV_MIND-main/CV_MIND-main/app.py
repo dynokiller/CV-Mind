@@ -1181,7 +1181,7 @@ def upload_resume():
         print("Skipping DB insert (MongoDB not connected)")
 
 
-    parser_url = os.getenv("PARSERAI_URL", "http://localhost:8000/upload-analyze")
+    parser_url = os.getenv("PARSERAI_URL", "https://dyno0126-cv-mind-analyzer.hf.space/upload-analyze")
 
     user_name = session.get("name", "User")
 
@@ -1330,17 +1330,14 @@ def analyze_linkedin():
         flash("Please paste more LinkedIn profile content!", "error")
         return redirect(url_for("upload"))
 
-    # Updated HF Space URL for API connection
-    parser_url = "https://dyno0126-resume.hf.space/predict"
-    
+    # Use the same CV Mind Analyzer HF Space — /analyze-text accepts JSON {"text": "..."}
+    parser_url = os.getenv("PARSERAI_URL", "https://dyno0126-cv-mind-analyzer.hf.space/upload-analyze")
+    analyze_url = parser_url.replace("/upload-analyze", "/analyze-text")
+
     start_time = time.time()
     try:
-        # 🚨 FastAPI expects Form-Data with "inputs", no JSON body
-        payload = {
-            "inputs": linkedin_text
-        }
-        
-        response = requests.post(parser_url, data=payload, timeout=120)
+        payload = {"text": linkedin_text}
+        response = requests.post(analyze_url, json=payload, timeout=120)
         process_time = round(time.time() - start_time, 2)
 
         if response.status_code == 200:

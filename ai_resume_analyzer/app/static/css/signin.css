@@ -1,0 +1,426 @@
+/* ===============================
+   SIGNIN WRAPPER
+================================ */
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box; /* Ensures padding doesn't affect width */
+}
+
+.signin {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f9fafb, #eef2ff, #fdf4ff);
+  font-family: "Poppins", sans-serif;
+}
+
+/* ===============================
+   CONTAINER
+================================ */
+
+.signin-container {
+  width: 100%;
+  max-width: 420px;
+  padding-top: 20px;
+}
+
+/* ===============================
+   CARD
+================================ */
+
+.signin-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 40px 36px;
+  box-shadow: 0 20px 40px rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.15);
+}
+
+/* ===============================
+   LOGO
+================================ */
+
+.signin-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.signin-logo img {
+  height: 100px;
+  width: auto;
+  object-fit: contain;
+}
+
+.signin-logo h2 {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* ===============================
+   TITLE
+================================ */
+
+.signin-title {
+  text-align: center;
+  font-size: 32px;
+  margin-bottom: 30px;
+}
+
+/* ===============================
+   INPUT GROUP
+================================ */
+
+.signin-input-group {
+  margin-bottom: 18px;
+}
+
+.signin-input-group label {
+  font-size: 14px;
+  color: #6b7280;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.signin-input-group input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(124, 58, 237, 0.15);
+  font-size: 14px;
+  outline: none;
+  transition: 0.25s ease;
+}
+
+.signin-input-group input:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.1);
+}
+
+/* ===============================
+   PASSWORD EYE ICON
+================================ */
+
+.signin-password {
+  position: relative;
+}
+
+.signin-password i {
+  position: absolute;
+  right: 12px;
+  top: 38px;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+/* ===============================
+   FORGOT PASSWORD
+================================ */
+
+.signin-forgot {
+  text-align: right;
+  margin-bottom: 22px;
+}
+
+.signin-forgot a {
+  font-size: 13px;
+  color: #7c3aed;
+  text-decoration: none;
+}
+
+/* ===============================
+   SIGN IN BUTTON
+================================ */
+
+.signin-btn-primary {
+  width: 100%;
+  padding: 14px;
+  border-radius: 50px;
+  border: none;
+  background: linear-gradient(135deg, #7c3aed, #a78bfa);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.25s ease;
+  box-shadow: 0 10px 25px rgba(124, 58, 237, 0.25);
+}
+
+.signin-btn-primary:hover {
+  transform: translateY(-3px);
+}
+
+/* ===============================
+   GOOGLE BUTTON
+================================ */
+
+.signin-google-btn {
+  margin-top: 14px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 40px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.signin-google-btn:hover {
+  border-color: #7c3aed;
+}
+
+.signin-google-btn img {
+  width: 20px;
+}
+
+/* ===============================
+   SIGNUP LINK
+================================ */
+
+.signin-link-text {
+  margin-top: 22px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.signin-link-text a {
+  color: #7c3aed;
+  text-decoration: none;
+}
+
+/* ===============================
+   ALERT MESSAGES
+================================ */
+
+.signin-alert {
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+
+.signin-alert.error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.signin-alert.success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.grecaptcha-badge {
+  visibility: hidden;
+}
+
+.recaptcha-text {
+  font-size: 12px;
+  text-align: center;
+  margin-top: 15px;
+  color: #6b7280;
+}
+
+/* Password wrapper */
+.signin-password {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Password input */
+.signin-password input {
+  width: 100%;
+  padding: 12px 45px 12px 14px; /* space for eye */
+  border-radius: 10px;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  outline: none;
+  font-size: 14px;
+}
+
+/* Eye icon */
+.signin-password #togglePassword {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #6b7280;
+  font-size: 16px;
+  transition: 0.2s;
+}
+
+/* Hover effect */
+.signin-password #togglePassword:hover {
+  color: #7c3aed;
+}
+
+/* ===============================
+   RESPONSIVE DESIGN
+================================ */
+
+/* Small phones (up to 480px) */
+@media (max-width: 480px) {
+  .signin {
+    padding: 16px;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .signin-container {
+    max-width: 100%;
+  }
+
+  .signin-card {
+    padding: 24px 18px;
+    border-radius: 18px;
+  }
+
+  .signin-logo img {
+    height: 70px;
+  }
+
+  .signin-title {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+
+  .signin-input-group input {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .signin-btn-primary {
+    padding: 12px;
+    font-size: 14px;
+  }
+
+  .signin-google-btn {
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  .signin-link-text {
+    font-size: 13px;
+  }
+
+  .recaptcha-text {
+    font-size: 11px;
+  }
+}
+
+/* Tablets (481px to 768px) */
+@media (max-width: 768px) {
+  .signin {
+    padding: 20px;
+  }
+
+  .signin-card {
+    padding: 32px 24px;
+    overflow: hidden;
+  }
+
+  .signin-title {
+    font-size: 28px;
+  }
+
+  .signin-logo img {
+    height: 80px;
+  }
+}
+
+/* Large screens (>= 1200px) */
+@media (min-width: 1200px) {
+  .signin-container {
+    max-width: 460px;
+  }
+
+  .signin-card {
+    padding: 48px 40px;
+  }
+
+  .signin-title {
+    font-size: 34px;
+  }
+}
+
+@media (max-width: 480px) {
+  .signin {
+    padding: 0;
+    align-items: stretch;
+    justify-content: stretch;
+  }
+
+  .signin-container {
+    max-width: 100%;
+    width: 100%;
+    padding: 25px;
+  }
+
+  .signin-card {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    padding: 24px 16px;
+    border-radius: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .signin-container {
+    padding: 15px 25px 0px 25px;
+  }
+
+  .signin-card {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
+@media (max-width: 320px) {
+  .signin-container {
+    padding: 15px 10px 0px 10px;
+  }
+}
+/* ===============================
+   FLEX IMPROVEMENTS
+================================ */
+
+/* Prevent overflow issues */
+.signin-container,
+.signin-card {
+  width: 100%;
+}
+
+/* Better input sizing */
+.signin-input-group input {
+  width: 100%;
+}
+
+/* Fix button text overflow */
+.signin-btn-primary,
+.signin-google-btn {
+  white-space: nowrap;
+}
+
+/* ===============================
+   MOBILE HEIGHT FIX (IMPORTANT)
+================================ */
+
+/* Fix 100vh issue on mobile browsers */
+.signin {
+  min-height: 100dvh;
+}

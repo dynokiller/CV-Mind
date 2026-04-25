@@ -1,0 +1,144 @@
+{% extends "layout.html" %} {% block content %}
+
+<div class="uploadR">
+  <div class="upload-card">
+    <div class="upload-left">
+      <h2><i class="fa-solid fa-cloud-arrow-up"></i> Resume Upload</h2>
+      <p>Upload your resume (PDF / DOCX). Max file size: 28MB</p>
+
+      <!-- ✅ Real upload form -->
+      <form
+        action="{{ url_for('upload_resume') }}"
+        method="POST"
+        enctype="multipart/form-data"
+        class="upload-form"
+      >
+        <!-- hidden file input -->
+        <input
+          type="file"
+          id="resumeInput"
+          name="resume"
+          accept=".pdf,.doc,.docx"
+          hidden
+          required
+        />
+
+        <!-- Drop Zone -->
+        <div class="drop-zone" id="dropZone">
+          <div class="drop-icon">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+          </div>
+
+          <h3>Drag & drop your PDF/DOCX here</h3>
+          <p>or <span class="browse-link">click to browse</span></p>
+
+          <!-- file preview -->
+          <div class="file-preview" id="filePreview" style="display: none">
+            <i class="fa-solid fa-file-lines"></i>
+            <div>
+              <h4 id="fileName">resume.pdf</h4>
+              <p id="fileSize">0 KB</p>
+            </div>
+            <button type="button" class="remove-file" id="removeFile">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <button type="submit" class="parse-btn" id="uploadBtn" disabled>
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Upload & Parse
+            Resume
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div class="upload-right">
+      <div class="mini-card">
+        <h3><i class="fa-solid fa-circle-info"></i> Upload Tips</h3>
+        <ul>
+          <li><i class="fa-solid fa-check"></i> Use PDF for best results</li>
+          <li><i class="fa-solid fa-check"></i> Avoid scanned resumes</li>
+          <li><i class="fa-solid fa-check"></i> Keep resume under 28MB</li>
+          <li>
+            <i class="fa-solid fa-check"></i> Use proper headings & format
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const dropZone = document.getElementById("dropZone");
+  const resumeInput = document.getElementById("resumeInput");
+  const filePreview = document.getElementById("filePreview");
+  const fileName = document.getElementById("fileName");
+  const fileSize = document.getElementById("fileSize");
+  const uploadBtn = document.getElementById("uploadBtn");
+  const removeFile = document.getElementById("removeFile");
+
+  // click dropzone => open file chooser
+  dropZone.addEventListener("click", (e) => {
+    if (e.target.closest(".remove-file") || e.target.closest("button")) return;
+    resumeInput.click();
+  });
+
+  // file picked manually
+  resumeInput.addEventListener("change", () => {
+    if (resumeInput.files.length > 0) {
+      showFile(resumeInput.files[0]);
+    }
+  });
+
+  // drag over
+  dropZone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropZone.classList.add("dragover");
+  });
+
+  // drag leave
+  dropZone.addEventListener("dragleave", () => {
+    dropZone.classList.remove("dragover");
+  });
+
+  // drop file
+  dropZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropZone.classList.remove("dragover");
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      resumeInput.files = files;
+      showFile(files[0]);
+    }
+  });
+
+  function showFile(file) {
+    const allowed = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/msword",
+    ];
+
+    if (!allowed.includes(file.type)) {
+      alert("Only PDF/DOC/DOCX files are allowed!");
+      resumeInput.value = "";
+      return;
+    }
+
+    filePreview.style.display = "flex";
+    fileName.innerText = file.name;
+    fileSize.innerText = (file.size / 1024).toFixed(1) + " KB";
+    uploadBtn.disabled = false;
+  }
+
+  // remove file
+  removeFile.addEventListener("click", (e) => {
+    e.stopPropagation();
+    resumeInput.value = "";
+    filePreview.style.display = "none";
+    uploadBtn.disabled = true;
+  });
+</script>
+
+{% endblock %}

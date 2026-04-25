@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Verify Account</title>
+
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="{{ url_for('static', filename='../static/images/squre_logo1.png') }}?v=2"
+    />
+
+    <!-- CSS -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/verfiy_account.css') }}"
+    />
+
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+  </head>
+
+  <body>
+    <div class="verify_acc">
+      <div class="verify-container">
+        <div class="verify-card">
+          <!-- LOGO + TITLE -->
+          <div class="verify-logo">
+            <img
+              src="{{ url_for('static', filename='images/tranperent_logo.png') }}"
+              alt="logo"
+            />
+            <h2 class="verify-title">Verify Account</h2>
+          </div>
+
+          <!-- SUBTEXT -->
+          <p class="verify-subtext">
+            OTP sent to your email.<br />
+            Enter 6-digit code below.
+          </p>
+
+          <!-- FLASH MESSAGES -->
+          {% with messages = get_flashed_messages(with_categories=true) %} {% if
+          messages %} {% for category, message in messages %}
+          <div
+            class="flash-msg {{ 'flash-success' if category == 'success' else 'flash-error' }}"
+            {%
+            if
+            category=="success"
+            %}
+            data-otp-sent="true"
+            {%
+            endif
+            %}
+          >
+            {{ message }}
+          </div>
+          {% endfor %} {% endif %} {% endwith %}
+
+          <!-- JS FLASH -->
+          <div id="flashContainer"></div>
+
+          <!-- FORM -->
+          <form method="POST" action="{{ url_for('verify_account') }}">
+            <!-- EMAIL -->
+            <div class="input-group">
+              <label><i class="fa-solid fa-envelope"></i> Email</label>
+              <input type="email" value="{{ email }}" readonly />
+            </div>
+
+            <!-- OTP -->
+            <div class="input-group">
+              <label><i class="fa-solid fa-key"></i> OTP</label>
+              <input
+                type="text"
+                name="otp"
+                maxlength="6"
+                inputmode="numeric"
+                required
+                placeholder="Enter 6 digit OTP"
+              />
+            </div>
+
+            <!-- RESEND -->
+            <div class="resend-wrapper">
+              <span>
+                Didn't receive mail?
+                <span id="resendLink" class="resend-link disabled">Resend</span>
+              </span>
+              <span id="timerText" class="timer">01:00</span>
+            </div>
+
+            <!-- LAST CHANCE -->
+            <p id="lastChance" class="last-chance" style="display: none">
+              <i class="fa-solid fa-circle-exclamation"></i>
+              Last chance to resend OTP
+            </p>
+
+            <!-- BUTTONS -->
+            <div class="action-row">
+              <button type="submit" class="btn btn-primary" id="verifyBtn">
+                <span id="verifyText">Please wait</span>
+                <i
+                  id="verifySpinner"
+                  class="fa-solid fa-circle-notch fa-spin"
+                ></i>
+              </button>
+
+              <button type="button" class="btn btn-secondary" id="cancelBtn">
+                <i class="fa-solid fa-xmark"></i> Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCRIPT -->
+    <script>
+      let resendCount = 0;
+      const maxResend = 5;
+
+      let timer = 0; // 🔥 start at 0 (important)
+      let interval = null;
+      let isRequesting = false;
+
+      const resendLink = document.getElementById("resendLink");
+      const timerText = document.getElementById("timerText");
+      const lastChance = document.getElementById("lastChance");
+      const verifyBtn = document.getElementById("verifyBtn");
+      const verifyText = document.getElementById("verifyText");
+      const verifySpinner = document.getElementById("verifySpinner");
+      const cancelBtn = document.getElementById("cancelBtn");
+      const otpInput = document.querySelector('input[name="otp"]');
+
+      // ✅ TIMER FUNCTION
+      function startTimer(duration = 60) {
+        clearInterval(interval);
+
+        timer = duration;
+        resendLink.classList.add("disabled");
+
+        updateTimerUI();
+
+        interval = setInterval(() => {
+          timer--;
+          updateTimerUI();
+
+          if (timer <= 0) {
+            clearInterval(interval);
+            timer = 0;
+            timerText.textContent = "";
+
+            if (resendCount < maxResend) {
+              resendLink.classList.remove("disabled");
+            }
+          }
+        }, 1000);
+      }
+
+      function updateTimerUI() {
+        if (timer > 0) {
+          timerText.textContent = `00:${timer < 10 ? "0" + timer : timer}`;
+        }
+      }
+
+      // ✅ INIT
+      function initPage() {
+        verifyBtn.disabled = false;
+        verifyText.textContent = "Verify";
+        verifySpinner.style.display = "none";
+
+        // 🔥 IMPORTANT: DO NOT force timer to 60 here
+        if (timer <= 0) {
+          resendLink.classList.remove("disabled");
+          timerText.textContent = "";
+        }
+      }
+
+      // ✅ OTP SENT
+      function onOtpSent() {
+        verifyBtn.disabled = false;
+        verifyText.textContent = "Verify";
+        verifySpinner.style.display = "none";
+
+        startTimer(60);
+      }
+
+      // 🔥 FORM SUBMIT
+      document.querySelector("form").addEventListener("submit", () => {
+        verifyBtn.disabled = true;
+        verifyText.textContent = "Please wait";
+        verifySpinner.style.display = "inline-block";
+      });
+
+      // 🔁 RESEND OTP (FIXED LOGIC)
+
+      resendLink.addEventListener("click", async () => {
+        // 🚫 Block conditions
+        if (isRequesting || resendCount >= maxResend || timer > 0) return;
+
+        isRequesting = true;
+        resendLink.classList.add("disabled");
+
+        try {
+          const res = await fetch("{{ url_for('resend_otp') }}", {
+            method: "POST",
+          });
+
+          const data = await res.json();
+
+          showFlash(data.message, data.success ? "success" : "error");
+
+          if (data.success) {
+            // ✅ ONLY success restarts timer
+            resendCount++;
+            startTimer();
+
+            if (resendCount === maxResend - 1) {
+              lastChance.style.display = "block";
+            }
+          }
+          // ❌ DO NOTHING on error
+          // timer continues automatically
+          // resend stays disabled until timer ends
+        } catch {
+          showFlash("Server error. Try again.", "error");
+          // ❌ DO NOTHING here also
+        } finally {
+          isRequesting = false;
+        }
+      });
+
+      // ❌ CANCEL
+      cancelBtn.addEventListener("click", () => {
+        window.location.href = "{{ url_for('signin') }}";
+      });
+
+      // 💬 FLASH
+      function showFlash(msg, type) {
+        const c = document.getElementById("flashContainer");
+        c.innerHTML = `<div class="flash-msg ${
+          type === "success" ? "flash-success" : "flash-error"
+        }">${msg}</div>`;
+
+        setTimeout(() => (c.innerHTML = ""), 5000);
+      }
+
+      // 🔢 OTP INPUT FILTER
+      otpInput.addEventListener("input", (e) => {
+        e.target.value = e.target.value.replace(/\D/g, "").slice(0, 6);
+      });
+
+      // 🚀 INIT RUN
+      initPage();
+
+      const otpSent = document.querySelector('[data-otp-sent="true"]');
+
+      if (otpSent) {
+        onOtpSent();
+      }
+
+      // ⏳ CLEAN FLASH
+      setTimeout(() => {
+        document.querySelectorAll(".flash-msg").forEach((m) => m.remove());
+      }, 5000);
+    </script>
+  </body>
+</html>

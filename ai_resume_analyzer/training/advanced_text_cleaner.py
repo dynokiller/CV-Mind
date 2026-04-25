@@ -81,6 +81,10 @@ def extract_structured_skills(text: str) -> str:
         'cad', 'autocad', 'catia',
         # BPO / Customer
         'bpo', 'crm', 'customer service',
+        # Healthcare / Medical
+        'doctor', 'medical', 'healthcare', 'surgery', 'surgeon', 'nurse', 'nursing', 'clinical',
+        'cardiology', 'pediatrics', 'hospital', 'patient', 'md', 'mbbs', 'bls', 'acls', 'pharmacy',
+        'anatomy', 'physiology', 'pathology', 'medicine',
     }
     
     found_skills = []

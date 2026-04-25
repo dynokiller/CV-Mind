@@ -1,0 +1,354 @@
+/* ============================
+   ROOT COLORS (SCOPED)
+============================ */
+
+.MDashboard {
+  --bg: #f8fafc;
+  --card-bg: rgba(255, 255, 255, 0.9);
+  --border: #e5e7eb;
+  --text: #0f172a;
+  --muted: #64748b;
+
+  --primary: #7c3aed;
+  --primary-light: #a78bfa;
+
+  --success: #16a34a;
+  --warning: #d97706;
+  --error: #dc2626;
+
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Poppins", sans-serif;
+}
+
+/* ============================
+   DARK MODE (SCOPED)
+============================ */
+
+body[data-theme="dark"] .MDashboard {
+  --bg: #0f172a;
+  --card-bg: rgba(20, 24, 35, 0.95);
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #f8fafc;
+  --muted: #94a3b8;
+
+  --primary: #8b5cf6;
+  --primary-light: #a78bfa;
+
+  --success: #34d399;
+  --warning: #fbbf24;
+  --error: #f87171;
+}
+
+/* ============================
+   STATS GRID
+============================ */
+
+.MDashboard .stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.MDashboard .stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  transition: 0.25s ease;
+}
+
+.MDashboard .stat-card:hover {
+  transform: translateY(-4px);
+}
+
+.MDashboard .stat-card i {
+  font-size: 24px;
+  color: var(--primary);
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(124, 58, 237, 0.08);
+}
+
+.MDashboard .stat-card h2 {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.MDashboard .stat-card p {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ============================
+   GRID LAYOUT
+============================ */
+
+.MDashboard .grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 18px;
+}
+
+/* ============================
+   CARD BOX
+============================ */
+
+.MDashboard .card-box {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+/* ============================
+   CHART PLACEHOLDER
+============================ */
+
+.MDashboard .chart-placeholder {
+  margin-top: 14px;
+  height: 260px;
+  border-radius: 16px;
+  border: 2px dashed #dbeafe;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  background: rgba(124, 58, 237, 0.03);
+}
+
+.MDashboard .chart-placeholder i {
+  font-size: 42px;
+  color: var(--primary);
+}
+
+body[data-theme="dark"] .MDashboard .chart-placeholder {
+  border: 2px dashed rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* ============================
+   TABLE
+============================ */
+
+.MDashboard .table-box {
+  margin-top: 18px;
+}
+
+.MDashboard table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 14px;
+}
+
+.MDashboard thead th {
+  text-align: left;
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 12px;
+}
+
+.MDashboard tbody td {
+  padding: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+}
+
+/* ============================
+   STATUS BADGES
+============================ */
+
+.MDashboard .status {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.MDashboard .success {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--success);
+}
+
+.MDashboard .pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--warning);
+}
+
+.MDashboard .error {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--error);
+}
+
+/* ============================
+   BUTTON
+============================ */
+
+.MDashboard .view-btn {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  font-weight: 600;
+  transition: 0.25s ease;
+}
+
+.MDashboard .view-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(124, 58, 237, 0.3);
+}
+
+/* ============================
+   RESPONSIVE
+============================ */
+
+@media (max-width: 1100px) {
+  .MDashboard .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .MDashboard .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================
+   TABLET (≤ 1024px)
+========================= */
+@media (max-width: 1024px) {
+
+  .MDashboard .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .MDashboard .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .MDashboard .chart-placeholder {
+    height: 220px;
+  }
+}
+
+/* =========================
+   MOBILE (≤ 768px)
+========================= */
+@media (max-width: 768px) {
+
+  /* Stats → single column */
+  .MDashboard .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .MDashboard .stat-card {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .MDashboard .stat-card h2 {
+    font-size: 22px;
+  }
+
+  .MDashboard .stat-card i {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+
+  /* Cards */
+  .MDashboard .card-box {
+    padding: 14px;
+  }
+
+  /* Chart */
+  .MDashboard .chart-placeholder {
+    height: 200px;
+    font-size: 13px;
+  }
+
+  /* Table scroll */
+  .MDashboard .table-box {
+    overflow-x: auto;
+  }
+
+  .MDashboard table {
+    min-width: 600px;
+  }
+}
+
+/* =========================
+   SMALL PHONES (≤ 480px)
+========================= */
+@media (max-width: 480px) {
+
+  .MDashboard {
+    padding: 6px;
+  }
+
+  .MDashboard .stat-card {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .MDashboard .stat-card h2 {
+    font-size: 20px;
+  }
+
+  .MDashboard .stat-card p {
+    font-size: 12px;
+  }
+
+  .MDashboard .chart-placeholder {
+    height: 180px;
+  }
+
+  /* Buttons */
+  .MDashboard .view-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+}
+
+/* =========================
+   EXTRA SMALL (≤ 360px)
+========================= */
+@media (max-width: 360px) {
+
+  .MDashboard .stat-card {
+    padding: 10px;
+  }
+
+  .MDashboard .stat-card h2 {
+    font-size: 18px;
+  }
+
+  .MDashboard .stat-card i {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+
+  .MDashboard .chart-placeholder {
+    height: 160px;
+  }
+}

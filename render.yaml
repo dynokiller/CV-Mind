@@ -1,61 +1,34 @@
 services:
-  # 1. AI Backend API
+  # Flask Frontend Dashboard — deployed on Render free tier
   - type: web
-    name: ai-resume-backend
-    env: docker
-    plan: free
-    region: oregon # adjust as needed (oregon, frankfurt, ohio, singapore)
-    rootDir: ai_resume_analyzer
-    dockerfilePath: Dockerfile
-    autoDeploy: false
-    envVars:
-      - key: MONGO_URI
-        sync: false # Set this manually in Render dashboard to your Atlas string
-
-      # ── ML Feature Flags ─────────────────────────────────────────────────
-      # OCR: Enable text extraction for image-based and scanned-PDF resumes
-      - key: USE_OCR
-        value: "true"
-
-      # LinkedIn: Enable /linkedin-analyze endpoint (requires USE_LINKEDIN=true)
-      - key: USE_LINKEDIN
-        value: "false"
-
-      # Transformer Classifier: Use DistilBERT zero-shot instead of XGBoost
-      # Caution: downloads ~90 MB model on first boot; disable on free tier
-      - key: USE_TRANSFORMER_CLASSIFIER
-        value: "false"
-
-      # EasyOCR: Enable better-accuracy OCR engine (downloads ~150 MB models)
-      # Caution: only enable if Render plan has sufficient disk space
-      - key: USE_EASYOCR
-        value: "false"
-
-  # 2. Flask Frontend Dashboard
-  - type: web
-    name: ai-resume-frontend
+    name: cv-mind-frontend
     env: python
     plan: free
     region: oregon
     rootDir: CV_MIND-main/CV_MIND-main
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --workers 2 --timeout 120 --bind 0.0.0.0:$PORT
     autoDeploy: false
     envVars:
+      # HuggingFace Space backend — handles all ML inference
       - key: PARSERAI_URL
-        # This dynamically injects the backend's Render URL + the endpoint path
-        value: https://ai-resume-backend.onrender.com/upload-analyze
-      - key: MONGO_URI
-        sync: false # Put the same Mongo URI string as the backend
+        value: https://dyno0126-cv-mind-analyzer.hf.space/upload-analyze
+
       - key: FLASK_SECRET_KEY
         generateValue: true
+
+      # Google OAuth — set manually in Render dashboard
       - key: GOOGLE_CLIENT_ID
-        sync: false 
+        sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
+
+      # reCAPTCHA — set manually in Render dashboard
       - key: RECAPTCHA_SITE_KEY
         sync: false
       - key: RECAPTCHA_SECRET_KEY
         sync: false
+
+      # Email service — set manually in Render dashboard
       - key: SENDMAIL_API_URL
         sync: false

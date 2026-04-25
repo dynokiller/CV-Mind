@@ -1,0 +1,288 @@
+/* ===============================
+   RESET
+================================ */
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ===============================
+   WRAPPER
+================================ */
+
+.verify_acc {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f9fafb, #eef2ff, #fdf4ff);
+  font-family: "Poppins", sans-serif;
+}
+
+/* ===============================
+   CONTAINER
+================================ */
+
+.verify_acc .verify-container {
+  width: 100%;
+  max-width: 420px;
+  padding-top: 20px;
+}
+
+/* ===============================
+   CARD
+================================ */
+
+.verify_acc .verify-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 40px 36px;
+  box-shadow: 0 20px 40px rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.15);
+}
+
+/* ===============================
+   LOGO / TITLE
+================================ */
+
+.verify_acc .verify-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.verify_acc .verify-logo img {
+  height: 90px;
+  object-fit: contain;
+}
+
+.verify_acc .verify-title {
+  font-size: 28px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.verify_acc .verify-subtext {
+  text-align: center;
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 20px;
+}
+
+/* ===============================
+   INPUT GROUP
+================================ */
+
+.verify_acc .input-group {
+  margin-bottom: 18px;
+}
+
+.verify_acc .input-group label {
+  font-size: 14px;
+  color: #6b7280;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.verify_acc .input-group input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(124, 58, 237, 0.15);
+  font-size: 14px;
+  outline: none;
+  transition: 0.25s ease;
+}
+
+.verify_acc .input-group input:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.1);
+}
+
+/* readonly email */
+.verify_acc input[readonly] {
+  background: #f3f4f6;
+  cursor: not-allowed;
+}
+
+/* ===============================
+   RESEND SECTION
+================================ */
+
+.verify_acc .resend-wrapper {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.verify_acc .resend-link {
+  color: #7c3aed;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.verify_acc .resend-link.disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.verify_acc .timer {
+  color: #6b7280;
+}
+
+/* ===============================
+   LAST CHANCE
+================================ */
+
+.verify_acc .last-chance {
+  font-size: 13px;
+  color: #dc2626;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+/* ===============================
+   BUTTONS
+================================ */
+
+.verify_acc .action-row {
+  display: flex;
+  gap: 10px;
+}
+
+.verify_acc .btn {
+  flex: 1;
+  padding: 14px;
+  border-radius: 50px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+/* Primary */
+.verify_acc .btn-primary {
+  background: linear-gradient(135deg, #7c3aed, #a78bfa);
+  color: white;
+  box-shadow: 0 10px 25px rgba(124, 58, 237, 0.25);
+}
+
+.verify_acc .btn-primary:hover {
+  transform: translateY(-2px);
+}
+
+/* Secondary */
+.verify_acc .btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.verify_acc .btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+/* Disabled */
+.verify_acc .btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* ===============================
+   ALERTS
+================================ */
+
+.verify_acc .flash-msg {
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.verify_acc .flash-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.verify_acc .flash-error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* ===============================
+   RESPONSIVE DESIGN
+================================ */
+
+/* Mobile */
+@media (max-width: 480px) {
+  .verify_acc {
+    padding: 16px;
+    align-items: stretch;
+  }
+
+  .verify_acc .verify-container {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .verify_acc .verify-card {
+    width: 100%;
+    height: 100%;
+    border-radius: 24px;
+    padding: 24px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .verify_acc .verify-logo img {
+    height: 70px;
+  }
+
+  .verify_acc .verify-title {
+    font-size: 22px;
+  }
+
+  .verify_acc .btn {
+    padding: 12px;
+    font-size: 14px;
+  }
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+  .verify_acc {
+    padding: 20px;
+  }
+
+  .verify_acc .verify-card {
+    padding: 32px 24px;
+  }
+
+  .verify_acc .verify-title {
+    font-size: 26px;
+  }
+}
+
+/* Large Screens */
+@media (min-width: 1200px) {
+  .verify_acc .verify-container {
+    max-width: 460px;
+  }
+
+  .verify_acc .verify-card {
+    padding: 48px 40px;
+  }
+
+  .verify_acc .verify-title {
+    font-size: 30px;
+  }
+}

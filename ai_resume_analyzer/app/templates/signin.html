@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Sign In - CVMIND</title>
+
+ <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="{{ url_for('static', filename='../static/images/squre_logo1.png') }}?v=2"
+    />
+    
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/signin.css') }}"
+    />
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/fontawesome-free-7.2.0-web/css/all.min.css') }}"
+    />
+
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+  </head>
+
+  <body>
+    <div class="signin">
+      <div class="signin-container">
+        <div class="signin-card">
+          <!-- Logo -->
+          <div class="signin-logo">
+            <img
+              src="{{ url_for('static', filename='images/tranperent_logo.png') }}"
+            />
+            <!-- <h2>CVMIND</h2> -->
+          </div>
+
+          <h2 class="signin-title">Sign In</h2>
+
+          {% with messages = get_flashed_messages(with_categories=true) %} {% if
+          messages %} {% for category, message in messages %}
+          <div class="signin-alert {{ category }}">{{ message }}</div>
+          {% endfor %} {% endif %} {% endwith %}
+
+          <div id="clientErrorContainer"></div>
+
+          <form id="signinForm" method="POST" action="{{ url_for('signin') }}">
+            <div class="signin-input-group">
+              <label><i class="fa-solid fa-envelope"></i> Email</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                placeholder="Enter your email"
+                required
+              />
+            </div>
+
+            <div class="signin-input-group">
+              <label><i class="fa-solid fa-lock"></i> Password</label>
+
+              <div class="signin-password">
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  placeholder="Enter your password"
+                  required
+                />
+
+                <i id="togglePassword" class="fa-solid fa-eye"></i>
+              </div>
+            </div>
+
+            <div class="signin-forgot">
+              <a href="{{ url_for('forgot_password') }}">Forgot password?</a>
+            </div>
+
+            <button
+              id="signinBtn"
+              class="g-recaptcha signin-btn signin-btn-primary"
+              data-sitekey="{{ recaptcha_site_key }}"
+              data-callback="onSubmit"
+              data-action="signin"
+            >
+              <i class="fa-solid fa-right-to-bracket"></i>
+              Sign In
+            </button>
+          </form>
+
+          <p class="recaptcha-text">
+            This site is protected by reCAPTCHA and the Google
+            <a href="https://policies.google.com/privacy">Privacy Policy</a>
+            and
+            <a href="https://policies.google.com/terms">Terms of Service</a>
+            apply.
+          </p>
+
+          <a href="{{ url_for('google_login') }}" class="signin-google-link">
+            <button type="button" class="signin-google-btn">
+              <img src="https://www.svgrepo.com/show/475656/google-color.svg" />
+
+              Continue with Google
+            </button>
+          </a>
+
+          <p class="signin-link-text">
+            Don't have an account?
+            <a href="{{ url_for('signup') }}">Sign Up</a>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const form = document.getElementById("signinForm");
+      const emailInput = document.getElementById("email");
+      const passwordInput = document.getElementById("password");
+      const signinBtn = document.getElementById("signinBtn");
+      const errorContainer = document.getElementById("clientErrorContainer");
+      const togglePassword = document.getElementById("togglePassword");
+
+      togglePassword.addEventListener("click", function () {
+        const type =
+          passwordInput.getAttribute("type") === "password"
+            ? "text"
+            : "password";
+
+        passwordInput.setAttribute("type", type);
+
+        this.classList.toggle("fa-eye");
+        this.classList.toggle("fa-eye-slash");
+      });
+
+      function showFlashError(message) {
+        errorContainer.innerHTML = `
+<div class="signin-alert error">${message}</div>
+`;
+
+        setTimeout(() => {
+          errorContainer.innerHTML = "";
+        }, 3000);
+      }
+
+      function isValidEmail(email) {
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return regex.test(email);
+      }
+
+      signinBtn.addEventListener("click", function (e) {
+        const email = emailInput.value.trim();
+        const password = passwordInput.value.trim();
+
+        errorContainer.innerHTML = "";
+
+        if (!email) {
+          e.preventDefault();
+          showFlashError("Please enter your email.");
+          return;
+        }
+
+        if (!password) {
+          e.preventDefault();
+          showFlashError("Please enter your password.");
+          return;
+        }
+
+        if (!isValidEmail(email)) {
+          e.preventDefault();
+          showFlashError("Please enter a valid email address.");
+          return;
+        }
+      });
+
+      function onSubmit(token) {
+        signinBtn.disabled = true;
+
+        signinBtn.innerHTML =
+          '<i class="fa-solid fa-spinner fa-spin"></i> Signing in...';
+
+        form.submit();
+      }
+    </script>
+  </body>
+</html>

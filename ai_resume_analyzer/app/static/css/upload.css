@@ -1,0 +1,305 @@
+/* =========================
+   UPLOAD PAGE (SCOPED)
+========================= */
+
+.uploadR .upload-card {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 22px;
+}
+
+/* =========================
+   CARDS
+========================= */
+.uploadR .upload-left,
+.uploadR .upload-right {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 22px;
+  box-shadow: 0 15px 40px rgba(15, 23, 42, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+/* glow effect */
+.uploadR .upload-left::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top right, rgba(124, 58, 237, 0.08), transparent 60%);
+  pointer-events: none;
+}
+
+/* =========================
+   HEADER
+========================= */
+.uploadR .upload-left h2 {
+  font-size: 22px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.uploadR .upload-left p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+/* =========================
+   DROP ZONE
+========================= */
+.uploadR .drop-zone {
+  margin-top: 18px;
+  border-radius: 20px;
+  border: 2px dashed var(--border);
+
+  background: linear-gradient(145deg, rgba(124, 58, 237, 0.04), rgba(255,255,255,0.6));
+  backdrop-filter: blur(6px);
+
+  padding: 28px 20px;
+  min-height: 320px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.uploadR .drop-zone:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.uploadR .drop-zone.dragover {
+  border-color: var(--primary);
+  background: rgba(124, 58, 237, 0.08);
+  box-shadow: 0 20px 50px rgba(124, 58, 237, 0.2);
+}
+
+/* ICON */
+.uploadR .drop-icon {
+  width: 70px;
+  height: 70px;
+  border-radius: 18px;
+
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: white;
+  font-size: 28px;
+
+  box-shadow: 0 10px 25px rgba(124, 58, 237, 0.35);
+}
+
+/* TEXT */
+.uploadR .drop-zone h3 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.uploadR .drop-zone p {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.uploadR .browse-link {
+  color: var(--primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* =========================
+   FILE PREVIEW
+========================= */
+.uploadR .file-preview {
+  width: 100%;
+  max-width: 520px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 14px;
+  border-radius: 14px;
+
+  background: rgba(124, 58, 237, 0.05);
+  border: 1px solid var(--border);
+
+  transition: 0.2s;
+}
+
+.uploadR .file-preview:hover {
+  transform: translateY(-1px);
+}
+
+.uploadR .file-preview i {
+  font-size: 26px;
+  color: var(--primary);
+}
+
+.uploadR .file-preview h4 {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.uploadR .file-preview p {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* REMOVE BUTTON */
+.uploadR .remove-file {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+
+  transition: 0.2s;
+}
+
+.uploadR .remove-file:hover {
+  transform: scale(1.05);
+}
+
+/* =========================
+   BUTTON
+========================= */
+.uploadR .parse-btn {
+  width: 100%;
+  max-width: 520px;
+
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+
+  font-weight: 700;
+  cursor: pointer;
+
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+
+  transition: 0.25s;
+}
+
+.uploadR .parse-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(124, 58, 237, 0.3);
+}
+
+.uploadR .parse-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =========================
+   RIGHT CARD
+========================= */
+.uploadR .mini-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.uploadR .mini-card ul {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.uploadR .mini-card li {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 1024px) {
+  .uploadR .upload-card {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .uploadR .upload-left,
+  .uploadR .upload-right {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .uploadR .drop-zone {
+    min-height: 260px;
+    padding: 20px;
+  }
+
+  .uploadR .drop-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+  }
+
+  .uploadR .parse-btn {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .uploadR .upload-left h2 {
+    font-size: 18px;
+  }
+
+  .uploadR .drop-zone h3 {
+    font-size: 14px;
+  }
+
+  .uploadR .drop-zone p {
+    font-size: 12px;
+  }
+}
+
+/* =========================
+   DARK MODE
+========================= */
+
+body[data-theme="dark"] .uploadR .upload-left,
+body[data-theme="dark"] .uploadR .upload-right {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+
+body[data-theme="dark"] .uploadR .drop-zone {
+  background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+}
+
+body[data-theme="dark"] .uploadR .file-preview {
+  background: rgba(255,255,255,0.05);
+}
+
+body[data-theme="dark"] .uploadR .remove-file {
+  background: rgba(239, 68, 68, 0.15);
+}

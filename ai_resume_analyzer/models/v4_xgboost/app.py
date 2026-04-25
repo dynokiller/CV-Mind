@@ -60,6 +60,9 @@ def extract_structured_skills(text: str) -> str:
         'html', 'css', 'rest', 'api', 'finance', 'accounting', 'sales', 'marketing',
         'figma', 'photoshop', 'ui', 'ux', 'recruitment', 'hr', 'human resources',
         'cad', 'autocad', 'catia', 'bpo', 'crm', 'customer service',
+        'doctor', 'medical', 'healthcare', 'surgery', 'surgeon', 'nurse', 'nursing', 'clinical',
+        'cardiology', 'pediatrics', 'hospital', 'patient', 'md', 'mbbs', 'bls', 'acls', 'pharmacy',
+        'anatomy', 'physiology', 'pathology', 'medicine',
     }
     found_skills = []
     text_lower = text.lower()

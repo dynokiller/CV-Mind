@@ -139,9 +139,12 @@
     <!-- Row 2: Top Keywords -->
     {% if last_result.top_keywords %}
     <div style="margin-bottom: 14px;">
-      <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Top Keywords (SHAP)</p>
-      {% for kw in last_result.top_keywords.split(', ') %}
+      <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;">Top Keywords</p>
+      {% set kw_list = last_result.top_keywords if last_result.top_keywords is iterable and last_result.top_keywords is not string else last_result.top_keywords.split(', ') %}
+      {% for kw in kw_list %}
+        {% if kw %}
         <span style="display:inline-block; background:rgba(96,165,250,0.15); color:#60a5fa; padding:3px 10px; border-radius:12px; font-size:0.82rem; margin:2px;">{{ kw }}</span>
+        {% endif %}
       {% endfor %}
     </div>
     {% endif %}
