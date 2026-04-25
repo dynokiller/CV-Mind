@@ -6,3 +6,5 @@ dataset/
 *.pt 
 *.pth 
 .ipynb_checkpoints/ 
+
+CV_MIND-main/
