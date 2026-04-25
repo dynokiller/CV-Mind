@@ -5,7 +5,7 @@ services:
     env: python
     plan: free
     region: oregon
-    rootDir: CV_MIND-main/CV_MIND-main
+    rootDir: ai_resume_analyzer/app
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app --workers 2 --timeout 120 --bind 0.0.0.0:$PORT
     autoDeploy: false
