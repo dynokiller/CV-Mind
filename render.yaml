@@ -8,7 +8,7 @@ services:
     rootDir: ai_resume_analyzer/app
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app --workers 2 --timeout 120 --bind 0.0.0.0:$PORT
-    autoDeploy: false
+    autoDeploy: true
     envVars:
       - key: MONGO_URI
         value: mongodb+srv://cvmind:1AbRGPod5SvlSHmh@cluster0.n5qdfmp.mongodb.net/?appName=Cluster0
