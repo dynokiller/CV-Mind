@@ -139,8 +139,17 @@ def generate_user_id():
 
 def utc_to_ist(dt_obj):
     if not dt_obj:
-        return None
-    return dt_obj.replace(tzinfo=pytz.utc).astimezone(IST)
+        return "-"
+    if isinstance(dt_obj, str):
+        return dt_obj
+    try:
+        # If naive, assume UTC
+        if dt_obj.tzinfo is None:
+            dt_obj = dt_obj.replace(tzinfo=pytz.utc)
+        ist_dt = dt_obj.astimezone(IST)
+        return ist_dt.strftime("%d-%m-%Y %I:%M %p")
+    except Exception:
+        return str(dt_obj)
 
 
 def generate_google_password(full_name: str) -> str:
@@ -978,7 +987,16 @@ def dashboard():
     activities = all_activities_raw[:8]
 
     for act in activities:
+        act["_id"] = str(act["_id"])
+        # Prepare formatted date for display
         act["upload_date_local"] = utc_to_ist(act.get("upload_date"))
+        # Prepare ISO string for JSON serialization (JS Chart)
+        if isinstance(act.get("upload_date"), datetime):
+            act["upload_date"] = act["upload_date"].isoformat()
+        elif act.get("upload_date") is None:
+            act["upload_date"] = None
+        else:
+            act["upload_date"] = str(act["upload_date"])
 
     parsed_percent = 0
     if stats.get("total_resumes", 0) > 0:

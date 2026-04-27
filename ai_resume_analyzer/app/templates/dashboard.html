@@ -133,8 +133,7 @@
         <tr>
           <td>{{ act.candidate_name }}</td>
           <td>
-            {{ act.upload_date.strftime("%d-%m-%Y %I:%M %p") if act.upload_date
-            else "-" }}
+            {{ act.upload_date_local }}
           </td>
 
           <td>
