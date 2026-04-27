@@ -359,12 +359,15 @@ def signin():
     )
 
 
-# ----------------------------
-# Google Login
-# ----------------------------
 @app.route("/google-login")
 def google_login():
-    redirect_uri = url_for("google_callback", _external=True)
+    # Use explicit base URL if configured (e.g. on Vercel)
+    base_url = os.getenv("FRONTEND_BASE_URL")
+    if base_url:
+        redirect_uri = f"{base_url.rstrip('/')}/auth/google/callback"
+    else:
+        redirect_uri = url_for("google_callback", _external=True)
+        
     return google.authorize_redirect(redirect_uri)
 
 
