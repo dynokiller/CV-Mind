@@ -71,8 +71,8 @@
     <div style="flex:1; min-width:180px; background: rgba(82,113,255,0.1); border-radius:10px; padding:14px; text-align:center;">
       <p style="font-size:0.75rem; color:#94a3b8; margin-bottom:4px;">RESUME SCORE</p>
       <p style="font-weight:700; font-size:1.4rem;
-        color: {% if last_result.final_score > 75 %}#2ecc71{% elif last_result.final_score > 50 %}#f1c40f{% else %}#e74c3c{% endif %};">
-        {{ last_result.final_score }}<span style="font-size:0.85rem;">/100</span>
+        color: {% if last_result.final_score and last_result.final_score > 75 %}#2ecc71{% elif last_result.final_score and last_result.final_score > 50 %}#f1c40f{% else %}#e74c3c{% endif %};">
+        {{ last_result.final_score if last_result.final_score is not none else 0 }}<span style="font-size:0.85rem;">/100</span>
       </p>
     </div>
   </div>
