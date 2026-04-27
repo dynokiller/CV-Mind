@@ -757,9 +757,6 @@ def skip_personalization():
 
     return jsonify({"status": "success"})
 
-# ----------------------------
-# Dashboard
-# ----------------------------
 @app.route("/dashboard")
 def dashboard():
     if not is_logged_in():
@@ -767,18 +764,24 @@ def dashboard():
 
     user_id = session["user_id"]
 
-    stats = get_user_stats(user_id)
+    try:
+        stats = get_user_stats(user_id)
+        activity_cursor = activity_collection.find({"user_id": user_id}).sort("upload_date", -1).limit(8)
+        activities = list(activity_cursor)
 
-    activity_cursor = activity_collection.find({"user_id": user_id}).sort("upload_date", -1).limit(8)
-    activities = list(activity_cursor)
+        for act in activities:
+            act["_id"] = str(act["_id"])  # serialize ObjectId for Jinja tojson
+            act["upload_date_local"] = utc_to_ist(act.get("upload_date"))
 
-    for act in activities:
-        act["_id"] = str(act["_id"])  # serialize ObjectId for Jinja tojson
-        act["upload_date_local"] = utc_to_ist(act.get("upload_date"))
-
-    parsed_percent = 0
-    if stats.get("total_resumes", 0) > 0:
-        parsed_percent = round((stats.get("parsed_success", 0) / stats["total_resumes"]) * 100)
+        parsed_percent = 0
+        if stats.get("total_resumes", 0) > 0:
+            parsed_percent = round((stats.get("parsed_success", 0) / stats["total_resumes"]) * 100)
+    except Exception as e:
+        print(f"[ERROR] Dashboard data fetch failed: {e}")
+        stats = {"total_resumes": 0, "parsed_success": 0, "avg_match_score": 0}
+        activities = []
+        parsed_percent = 0
+        flash("Could not fetch latest stats from database. Showing cached data.", "warning")
 
     return render_template(
         "dashboard.html",
