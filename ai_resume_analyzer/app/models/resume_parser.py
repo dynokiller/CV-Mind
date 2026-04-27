@@ -140,13 +140,15 @@ def parse_resume(file_path: str) -> str:
         return _extract_text_pdf(file_path)
 
     elif ext in (".docx", ".doc"):
+        if ext == ".doc":
+            logger.warning(f"[Parser] Legacy .doc file detected: '{file_path}'. This may fail; .docx is preferred.")
         return _extract_text_docx(file_path)
 
     elif ext in (".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"):
         return _extract_text_image(file_path)
 
     else:
-        logger.warning(f"[Parser] Unsupported file extension: '{ext}'")
+        logger.error(f"[Parser] Unsupported file extension: '{ext}' for file '{file_path}'")
         return ""
 
 

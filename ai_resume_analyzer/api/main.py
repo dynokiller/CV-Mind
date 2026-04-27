@@ -33,6 +33,7 @@ from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form, Bod
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from motor.motor_asyncio import AsyncIOMotorClient
 
 # ── Set up logging before importing ML modules ────────────────────────────────
 logging.basicConfig(
