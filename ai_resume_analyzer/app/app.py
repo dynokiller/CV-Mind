@@ -1,25 +1,15 @@
 from flask import Flask, render_template, redirect, url_for, request, session, flash, make_response, jsonify
+from authlib.integrations.flask_client import OAuth
 from db import user_collection, stats_collection, activity_collection, file_integrity_collection, reset_tokens_collection   
 from itsdangerous import URLSafeTimedSerializer
-
-import sys
-import os
-base_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(base_dir, '..', 'models', 'v6_analyzer'))
-from resume_analyzer import ResumeAnalyzer
-from text_extractor import extract_text, extract_candidate_name
-
-ml_analyzer = ResumeAnalyzer()
-from werkzeug.security import generate_password_hash, check_password_hash
-from authlib.integrations.flask_client import OAuth
-import os, time, requests, pytz, random, re, uuid
-from werkzeug.utils import secure_filename
+import sys, os, time, requests, pytz, random, re, uuid
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from zoneinfo import ZoneInfo
-import threading
-import hashlib
-import secrets
+import threading, hashlib, secrets
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+from text_extractor import extract_candidate_name
 
 load_dotenv()
 
@@ -845,7 +835,7 @@ def upload_resume():
 
 
     # ----------------------------
-    # Extract Text & Run Model
+    # Extract Text & Run Model (via HuggingFace API)
     # ----------------------------
     status = "Pending"
     match_score = None
@@ -855,25 +845,38 @@ def upload_resume():
     extracted_text = ""
 
     try:
-        extracted_text = extract_text(filepath, filename)
-        result = ml_analyzer.analyze(extracted_text)
-        status = "Success"
-        
-        # Convert strength_score '4.0/10' to integer percentage 40
-        score_str = result.get("strength_score", "0/10")
-        try:
-            match_score = int(float(score_str.split('/')[0]) * 10)
-        except:
-            match_score = 0
+        parser_url = os.getenv("PARSERAI_URL")
+        if not parser_url:
+            raise ValueError("PARSERAI_URL not configured")
+
+        # Send file to HuggingFace Space API
+        with open(filepath, "rb") as f:
+            files = {"file": (filename, f)}
+            response = requests.post(parser_url, files=files, timeout=60)
+            
+        if response.status_code == 200:
+            result = response.json()
+            status = "Success"
+            
+            # Map API fields to Flask session/DB schema
+            match_score = result.get("final_score", 0)
+            extracted_text = result.get("full_resume_text", "")
+            
+            # Map result keys for consistency with existing UI
+            result["matched_keywords"] = result.get("skills_found", [])
+            result["missing_keywords"] = result.get("missing_skills", [])
+            
+        else:
+            status = "Error"
+            print(f"[ERROR] API analysis failed with status {response.status_code}: {response.text}")
             
         process_time = round(time.time() - start_time, 2)
         
     except Exception as e:
         process_time = round(time.time() - start_time, 2)
         status = "Error"
-        match_score = None
-        import traceback
         print(f"[ERROR] Analysis failed: {e}")
+        import traceback
         traceback.print_exc()
 
     # Extract name from resume (always runs, even on error)
@@ -1052,4 +1055,4 @@ def add_no_cache_headers(response):
     return response
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
