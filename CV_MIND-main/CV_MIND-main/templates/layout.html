@@ -159,7 +159,7 @@
                 />
                 {% else %}
                 <div class="avatar">
-                  {{ (session.get('name','JD')[0:2] | upper) }}
+                  {{ (session.get('name') or 'JD')[0:2] | upper }}
                 </div>
                 {% endif %}
 
@@ -178,7 +178,7 @@
                     />
                     {% else %}
                     <div class="avatar">
-                      {{ (session.get('name','US')[0:2] | upper) }}
+                      {{ (session.get('name') or 'US')[0:2] | upper }}
                     </div>
                     {% endif %}
                   </div>

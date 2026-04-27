@@ -352,7 +352,7 @@ def signin():
         session.permanent = True
         session["user_id"] = user["user_id"]
         session["user_email"] = user["email"]
-        session["name"] = user["name"]
+        session["name"] = str(user.get("name") or "User")
         session["profile_img"] = user.get("profile_img")
         if not user.get("personalized"):
             session["show_personalization"] = True
@@ -446,7 +446,7 @@ def google_callback():
         session.permanent = True
         session["user_id"] = user_id
         session["user_email"] = email
-        session["name"] = name
+        session["name"] = str(name or "User")
         session["profile_img"] = profile_img
 
         flash("Logged in with Google", "success")
@@ -1041,10 +1041,6 @@ def analytics():
     if not is_logged_in():
         return redirect(url_for("signin"))
     return render_template("analytics.html", page="analytics")
-
-
-    if not is_logged_in():
-        return redirect(url_for("signin"))
 
 
 @app.route("/settings")
