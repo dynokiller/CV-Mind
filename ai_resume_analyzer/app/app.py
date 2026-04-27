@@ -2,6 +2,7 @@ from flask import Flask, render_template, redirect, url_for, request, session, f
 from authlib.integrations.flask_client import OAuth
 from db import user_collection, stats_collection, activity_collection, file_integrity_collection, reset_tokens_collection   
 from itsdangerous import URLSafeTimedSerializer
+from werkzeug.middleware.proxy_fix import ProxyFix
 import sys, os, time, requests, pytz, random, re, uuid
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -15,11 +16,17 @@ from text_extractor import extract_candidate_name
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallbacksecretkey")
+app.secret_key = os.getenv("FLASK_SECRET_KEY") or os.getenv("SECRET_KEY") or "fallbacksecretkey"
 
 # Force HTTPS for url_for in production (Vercel)
-if os.getenv("VERCEL"):
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+# Security headers for session cookies
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+)
 
 
 # ----------------------------
@@ -56,7 +63,7 @@ google = oauth.register(
 )
 
 serializer = URLSafeTimedSerializer(
-    os.getenv("FLASK_SECRET_KEY")
+    app.secret_key if app.secret_key else "fallbacksecretkey"
 )
 
 # ----------------------------
@@ -64,11 +71,7 @@ serializer = URLSafeTimedSerializer(
 # ----------------------------
 
 
-IST = ZoneInfo("Asia/Kolkata")
-
-now_ist = datetime.now(IST)
-
-
+# Timezone Helper
 def is_logged_in():
     return session.get("user_id") is not None
 
