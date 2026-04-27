@@ -789,13 +789,14 @@ def upload():
     return render_template("upload.html", page="upload")
 
 
-# ----------------------------
-# Upload Resume and ParserAI
-# ----------------------------
-@app.route("/upload-resume", methods=["POST"])
+@app.route("/upload-resume", methods=["GET", "POST"])
+@app.route("/upload_resume", methods=["GET", "POST"])
 def upload_resume():
     if not is_logged_in():
         return redirect(url_for("signin"))
+        
+    if request.method == "GET":
+        return redirect(url_for("upload"))
 
     user_id = session["user_id"]
 
