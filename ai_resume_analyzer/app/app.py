@@ -9,12 +9,17 @@ from zoneinfo import ZoneInfo
 import threading, hashlib, secrets
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from werkzeug.middleware.proxy_fix import ProxyFix
 from text_extractor import extract_candidate_name
 
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallbacksecretkey")
+
+# Force HTTPS for url_for in production (Vercel)
+if os.getenv("VERCEL"):
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 
 # ----------------------------
@@ -373,77 +378,82 @@ def google_login():
 
 @app.route("/auth/google/callback")
 def google_callback():
-    google.authorize_access_token()
-    
-    resp = google.get("https://openidconnect.googleapis.com/v1/userinfo")
-    userinfo = resp.json()
-    
-    email = userinfo.get("email")
-    name = userinfo.get("name", "Google User")
-    profile_img = userinfo.get("picture")
+    try:
+        google.authorize_access_token()
+        
+        resp = google.get("https://openidconnect.googleapis.com/v1/userinfo")
+        userinfo = resp.json()
+        
+        email = userinfo.get("email")
+        name = userinfo.get("name", "Google User")
+        profile_img = userinfo.get("picture")
 
-    if not email:
-        flash("Google login failed!", "error")
-        return redirect(url_for("signin"))
+        if not email:
+            flash("Google login failed!", "error")
+            return redirect(url_for("signin"))
 
-    existing = user_collection.find_one({"email": email})
-             
-    # FIXED BLOCK (indentation + logic)
-    if not existing:
-        raw_password = generate_google_password(name)
-        hashed_password = generate_password_hash(raw_password)
-        user_id = generate_user_id()
-
-        user_collection.insert_one({
-            "user_id": user_id,
-            "name": name,
-            "email": email,
-            "password": hashed_password,
-            "created_at": datetime.now(),
-            "last_updated": datetime.now(),
-            "login_type": "google",
-            "profile_img": profile_img,
-            "is_verified": True,
-            "personalized": False,
-            "role": None,
-            "subrole": None
-        })
-
-        create_initial_stats(user_id)
-        user = user_collection.find_one({"user_id": user_id})
-
-        if not user.get("personalized"):
-            session["show_personalization"] = True
-        else:
-            session["show_personalization"] = False
-            
-        flash(f"Google account created Password: {raw_password}", "success")
-
-    else:
-        user_id = existing.get("user_id")
-
-        if not user_id:
+        existing = user_collection.find_one({"email": email})
+                
+        if not existing:
+            raw_password = generate_google_password(name)
+            hashed_password = generate_password_hash(raw_password)
             user_id = generate_user_id()
+
+            user_collection.insert_one({
+                "user_id": user_id,
+                "name": name,
+                "email": email,
+                "password": hashed_password,
+                "created_at": datetime.now(),
+                "last_updated": datetime.now(),
+                "login_type": "google",
+                "profile_img": profile_img,
+                "is_verified": True,
+                "personalized": False,
+                "role": None,
+                "subrole": None
+            })
+
+            create_initial_stats(user_id)
+            user_data = user_collection.find_one({"user_id": user_id})
+
+            if not user_data.get("personalized"):
+                session["show_personalization"] = True
+            else:
+                session["show_personalization"] = False
+                
+            flash(f"Google account created successfully", "success")
+
+        else:
+            user_id = existing.get("user_id")
+
+            if not user_id:
+                user_id = generate_user_id()
+                user_collection.update_one(
+                    {"email": email},
+                    {"$set": {"user_id": user_id}}
+                )
+                create_initial_stats(user_id)
+
             user_collection.update_one(
                 {"email": email},
-                {"$set": {"user_id": user_id}}
+                {"$set": {"profile_img": profile_img, "name": name, "last_updated": datetime.now(), "is_verified": True}}
             )
-            create_initial_stats(user_id)
+            
+        session.permanent = True
+        session["user_id"] = user_id
+        session["user_email"] = email
+        session["name"] = name
+        session["profile_img"] = profile_img
 
-        user_collection.update_one(
-            {"email": email},
-            {"$set": {"profile_img": profile_img, "name": name, "last_updated": datetime.now(), "is_verified": True}}
-        )
-        
-    session.permanent = True
-    session["user_id"] = user_id
-    session["user_email"] = email
-    session["name"] = name
-    session["profile_img"] = profile_img
+        flash("Logged in with Google", "success")
+        return redirect(url_for("dashboard"))
 
-    flash("Logged in with Google ", "success")
-    
-    return redirect(url_for("dashboard"))
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        flash(f"Login failed: {str(e)}", "error")
+        return redirect(url_for("signin"))
 
 
 # ----------------------------
