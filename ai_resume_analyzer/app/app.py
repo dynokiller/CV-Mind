@@ -9,12 +9,17 @@ from zoneinfo import ZoneInfo
 import threading, hashlib, secrets
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from werkzeug.middleware.proxy_fix import ProxyFix
 from text_extractor import extract_candidate_name
 
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallbacksecretkey")
+
+# Force HTTPS for url_for in production (Vercel)
+if os.getenv("VERCEL"):
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 
 # ----------------------------
