@@ -9,17 +9,12 @@ from zoneinfo import ZoneInfo
 import threading, hashlib, secrets
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from werkzeug.middleware.proxy_fix import ProxyFix
 from text_extractor import extract_candidate_name
 
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallbacksecretkey")
-
-# Force HTTPS for url_for in production (Vercel)
-if os.getenv("VERCEL"):
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 
 # ----------------------------
@@ -794,14 +789,10 @@ def upload():
     return render_template("upload.html", page="upload")
 
 
-@app.route("/upload-resume", methods=["GET", "POST"])
-@app.route("/upload_resume", methods=["GET", "POST"])
+@app.route("/upload-resume", methods=["POST"])
 def upload_resume():
     if not is_logged_in():
         return redirect(url_for("signin"))
-        
-    if request.method == "GET":
-        return redirect(url_for("upload"))
 
     user_id = session["user_id"]
 
