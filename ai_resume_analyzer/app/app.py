@@ -21,10 +21,14 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallbacksecretkey")
 # Upload Config
 # ----------------------------
 
-UPLOAD_FOLDER = "uploads"
+# Use /tmp for uploads on Vercel/Serverless
+UPLOAD_FOLDER = "/tmp" if os.getenv("VERCEL") else "uploads"
 ALLOWED_EXTENSIONS = {"pdf", "doc", "docx"}
 MAX_FILE_SIZE = 28 * 1024 * 1024  # 28MB
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 

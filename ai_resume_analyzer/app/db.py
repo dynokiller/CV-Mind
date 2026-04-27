@@ -30,7 +30,10 @@ reset_tokens_collection = db["password_reset_tokens"]
 reset_tokens_collection = db["password_reset_tokens"]
 
 # Auto delete expired password reset tokens
-reset_tokens_collection.create_index(
-    "expires_at",
-    expireAfterSeconds=0
-)
+try:
+    reset_tokens_collection.create_index(
+        "expires_at",
+        expireAfterSeconds=0
+    )
+except Exception as e:
+    print(f"[DB] Index creation skipped or failed: {e}")
