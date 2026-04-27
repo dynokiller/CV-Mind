@@ -1,0 +1,220 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<!-- ── Loading Overlay ──────────────────────────────────────────────────── -->
+<div id="loadingOverlay" style="
+  display: none;
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(10, 12, 25, 0.92);
+  backdrop-filter: blur(6px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+">
+  <div style="
+    width: 70px; height: 70px;
+    border: 4px solid rgba(82,113,255,0.2);
+    border-top-color: #5271ff;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  "></div>
+  <p style="color: #e2e8f0; font-size: 1.15rem; font-weight: 600;" id="loadingMsg">
+    Uploading &amp; parsing resume…
+  </p>
+  <p style="color: #64748b; font-size: 0.85rem;">This may take 15–30 s on first run</p>
+</div>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<div class="upload-tabs" style="display: flex; gap: 20px; margin-bottom: 25px; border-bottom: 1px solid rgba(148, 163, 184, 0.2); padding-bottom: 10px;">
+  <button class="tab-btn active" onclick="switchTab('resume-tab')" id="resume-btn" style="background: none; border: none; color: var(--accent); font-weight: bold; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid var(--accent); transition: 0.3s; font-size: 1.1rem;">
+    <i class="fa-solid fa-file-pdf"></i> Resume Upload
+  </button>
+  <button class="tab-btn" onclick="switchTab('linkedin-tab')" id="linkedin-btn" style="background: none; border: none; color: #94a3b8; font-weight: bold; cursor: pointer; padding: 10px 15px; transition: 0.3s; font-size: 1.1rem;">
+    <i class="fa-brands fa-linkedin"></i> LinkedIn Analyzer
+  </button>
+</div>
+
+<div id="resume-tab" class="tab-content">
+  <div class="upload-card">
+    <div class="upload-left">
+      <h2><i class="fa-solid fa-cloud-arrow-up"></i> Resume Upload</h2>
+      <p>Upload your resume (PDF / DOCX). Max file size: 28MB</p>
+
+      <!-- Server-side upload form for full-document parsing -->
+      <form id="resumeUploadForm" class="upload-form" action="{{ url_for('upload_resume') }}" method="POST" enctype="multipart/form-data">
+        <input type="file" id="resumeInput" name="resume" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" hidden required>
+        
+        <div class="jd-section" style="margin-top: 15px; margin-bottom: 20px; text-align: left;">
+          <label for="job_description" style="display: block; margin-bottom: 5px; font-weight: bold;">Job Description <span style="font-weight:normal; color:#94a3b8;">(Optional)</span></label>
+          <textarea name="job_description" id="job_description" rows="5" style="width: 100%; border-radius: 8px; padding: 10px; border: 1px solid #ccc; font-family: inherit; background: rgba(255,255,255,0.05); color: white;" placeholder="Paste the target Job Description here (optional)..."></textarea>
+        </div>
+
+        <div class="drop-zone" id="dropZone">
+          <div class="drop-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+          <h3>Drag &amp; drop your PDF/DOCX here</h3>
+          <p>or <span class="browse-link">click to browse</span></p>
+
+          <div class="file-preview" id="filePreview" style="display:none;">
+            <i class="fa-solid fa-file-lines"></i>
+            <div><h4 id="fileName">resume.pdf</h4><p id="fileSize">0 KB</p></div>
+            <button type="button" class="remove-file" id="removeFile"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+
+          <button type="submit" class="parse-btn" id="uploadBtn" disabled>
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Upload &amp; Parse Resume
+          </button>
+        </div>
+      </form>
+
+    </div>
+
+    <div class="upload-right">
+      <div class="mini-card">
+        <h3><i class="fa-solid fa-circle-info"></i> Upload Tips</h3>
+        <ul>
+          <li><i class="fa-solid fa-check"></i> Use PDF for best results</li>
+          <li><i class="fa-solid fa-check"></i> Avoid scanned resumes</li>
+          <li><i class="fa-solid fa-check"></i> Keep resume under 28MB</li>
+          <li><i class="fa-solid fa-check"></i> Use proper headings &amp; format</li>
+          <li><i class="fa-solid fa-clock"></i> First analysis may take ~30s</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="linkedin-tab" class="tab-content" style="display: none;">
+  <div class="upload-card">
+    <div class="upload-left" style="flex: 2;">
+      <h2><i class="fa-brands fa-linkedin"></i> LinkedIn Profile Analysis</h2>
+      <p>Paste your LinkedIn profile text (Summary, Experience, and Skills sections) below.</p>
+
+      <form id="linkedinForm" action="{{ url_for('analyze_linkedin') }}" method="POST" class="upload-form">
+        <div style="margin-top: 15px;">
+           <label style="display: block; margin-bottom: 8px; font-weight: bold;">LinkedIn Content</label>
+           <textarea name="linkedin_text" rows="12" style="width: 100%; border-radius: 12px; padding: 15px; border: 1px solid rgba(82, 113, 255, 0.3); background: rgba(82, 113, 255, 0.05); color: white; font-family: inherit; resize: vertical;" placeholder="Paste profile text here... (Tip: Go to your profile → Ctrl+A → Ctrl+C → Ctrl+V)"></textarea>
+        </div>
+
+        <div style="margin-top: 20px;">
+           <label style="display: block; margin-bottom: 8px; font-weight: bold;">Target Job Description <span style="font-weight:normal; color:#94a3b8;">(Optional)</span></label>
+           <textarea name="job_description" rows="4" style="width: 100%; border-radius: 12px; padding: 15px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-family: inherit;" placeholder="Paste JD here to calculate match score..."></textarea>
+        </div>
+
+        <button type="submit" class="parse-btn" id="linkedinBtn" style="margin-top: 25px; width: 100%;">
+          <i class="fa-solid fa-magnifying-glass-chart"></i> Analyze LinkedIn Profile
+        </button>
+      </form>
+    </div>
+
+    <div class="upload-right" style="flex: 1;">
+      <div class="mini-card">
+        <h3><i class="fa-solid fa-lightbulb"></i> How to use</h3>
+        <p style="font-size: 0.9rem; color: #94a3b8; line-height: 1.5;">
+          Navigate to your LinkedIn profile, select all text (or just sections like About, Experience, Education), and paste it into the box. Our AI will structure the data for analysis.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.style.display = 'none';
+    });
+    document.getElementById(tabId).style.display = 'block';
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.color = '#94a3b8';
+        btn.style.borderBottom = 'none';
+    });
+    
+    const activeBtn = document.getElementById(tabId.replace('tab', 'btn'));
+    activeBtn.classList.add('active');
+    activeBtn.style.color = 'var(--accent)';
+    activeBtn.style.borderBottom = '2px solid var(--accent)';
+  }
+
+  // ── Loading overlay helpers ──────────────────────────────────────────────
+  const overlay = document.getElementById('loadingOverlay');
+  function showOverlay(msg) {
+    document.getElementById('loadingMsg').textContent = msg;
+    overlay.style.display = 'flex';
+  }
+
+  // ── Resume upload form ───────────────────────────────────────────────────
+  const dropZone     = document.getElementById("dropZone");
+  const resumeInput  = document.getElementById("resumeInput");
+  const filePreview  = document.getElementById("filePreview");
+  const fileName     = document.getElementById("fileName");
+  const fileSize     = document.getElementById("fileSize");
+  const uploadBtn    = document.getElementById("uploadBtn");
+  const removeFile   = document.getElementById("removeFile");
+
+  dropZone.addEventListener("click", (e) => {
+    if (e.target.closest(".remove-file")) return;
+    if (e.target.closest(".parse-btn")) return;
+    resumeInput.click();
+  });
+
+  resumeInput.addEventListener("change", () => {
+    if (resumeInput.files.length > 0) showFile(resumeInput.files[0]);
+  });
+
+  dropZone.addEventListener("dragover",  (e) => { e.preventDefault(); dropZone.classList.add("dragover"); });
+  dropZone.addEventListener("dragleave", ()  => { dropZone.classList.remove("dragover"); });
+  dropZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropZone.classList.remove("dragover");
+    const files = e.dataTransfer.files;
+    if (files.length > 0) { resumeInput.files = files; showFile(files[0]); }
+  });
+
+  function showFile(file) {
+    const allowed = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/msword", "image/jpeg", "image/png", "image/jpg"
+    ];
+    if (!allowed.includes(file.type)) {
+      alert("Only PDF/DOC/DOCX/PNG/JPG files are allowed!");
+      resumeInput.value = "";
+      return;
+    }
+    filePreview.style.display = "flex";
+    fileName.innerText = file.name;
+    fileSize.innerText = (file.size / 1024).toFixed(1) + " KB";
+    uploadBtn.disabled = false;
+  }
+
+  removeFile.addEventListener("click", (e) => {
+    e.stopPropagation();
+    resumeInput.value = "";
+    filePreview.style.display = "none";
+    uploadBtn.disabled = true;
+  });
+
+  document.getElementById("resumeUploadForm").addEventListener("submit", (e) => {
+    if (!resumeInput.files.length) {
+      e.preventDefault();
+      alert("Please provide a resume file.");
+      return;
+    }
+    uploadBtn.disabled = true;
+    showOverlay("Uploading & parsing resume… please wait");
+  });
+
+  // ── LinkedIn form ────────────────────────────────────────────────────────
+  document.getElementById("linkedinForm").addEventListener("submit", () => {
+    document.getElementById("linkedinBtn").disabled = true;
+    showOverlay("Analyzing LinkedIn profile… please wait");
+  });
+</script>
+
+{% endblock %}

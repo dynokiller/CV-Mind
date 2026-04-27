@@ -1,0 +1,97 @@
+.settings-box{
+  background: rgba(255,255,255,0.92);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:18px;
+  max-width:700px;
+  box-shadow: 0 10px 35px rgba(15,23,42,0.06);
+}
+
+.setting-item{
+  margin-top:18px;
+  padding:14px;
+  border-radius:14px;
+  background:#f8fafc;
+  border:1px solid var(--border);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-weight:700;
+  color:#0f172a;
+}
+
+/* Switch Toggle */
+.switch{
+  position:relative;
+  display:inline-block;
+  width:50px;
+  height:28px;
+}
+
+.switch input{
+  opacity:0;
+  width:0;
+  height:0;
+}
+
+.slider{
+  position:absolute;
+  cursor:pointer;
+  top:0; left:0; right:0; bottom:0;
+  background:#cbd5e1;
+  transition:.2s;
+  border-radius:999px;
+}
+
+.slider:before{
+  position:absolute;
+  content:"";
+  height:22px;
+  width:22px;
+  left:3px;
+  bottom:3px;
+  background:white;
+  border-radius:50%;
+  transition:.2s;
+}
+
+.switch input:checked + .slider{
+  background: var(--blue);
+}
+
+.switch input:checked + .slider:before{
+  transform: translateX(22px);
+}
+
+/* ============================
+   DARK MODE - Settings Page
+============================ */
+
+/* Settings main box */
+body[data-theme="dark"] .settings-box {
+  background: rgba(20, 24, 35, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
+}
+
+/* Setting item row */
+body[data-theme="dark"] .setting-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: #f8fafc;
+}
+
+/* Switch track */
+body[data-theme="dark"] .slider {
+  background: #111827;
+}
+
+/* Switch thumb */
+body[data-theme="dark"] .slider:before {
+  background: #ffffff;
+}
+
+/* Checked switch (same blue but little brighter) */
+body[data-theme="dark"] .switch input:checked + .slider {
+  background: #2563eb;
+}

@@ -1,0 +1,277 @@
+.upload-card{
+  display:grid;
+  grid-template-columns: 2fr 1fr;
+  gap:18px;
+}
+
+/* Cards */
+.upload-left, .upload-right{
+  background: rgba(255,255,255,0.92);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:18px;
+  box-shadow: 0 10px 35px rgba(15,23,42,0.06);
+}
+
+.upload-left h2{
+  font-size:22px;
+  font-weight:900;
+}
+
+.upload-left p{
+  margin-top:6px;
+  color: var(--muted);
+  font-weight:600;
+}
+
+/* Drop Zone */
+.drop-zone{
+  margin-top:16px;
+  border-radius:18px;
+  border: 2px dashed #c7d2fe;
+  background: linear-gradient(180deg, #f5f7ff, #ffffff);
+  padding:24px 18px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  cursor:pointer;
+  transition: .2s ease;
+  min-height: 340px;
+  position: relative;
+}
+
+.drop-zone.dragover{
+  border-color: var(--blue);
+  box-shadow: 0 12px 45px rgba(47,111,255,0.22);
+  transform: translateY(-2px);
+}
+
+.drop-icon{
+  width:70px;
+  height:70px;
+  border-radius:20px;
+  background: rgba(47,111,255,0.12);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.drop-icon i{
+  font-size:32px;
+  color: var(--blue);
+}
+
+.drop-zone h3{
+  font-size:16px;
+  font-weight:800;
+  color: #111827;
+}
+
+.drop-zone p{
+  font-size:13px;
+  font-weight:700;
+  color: var(--muted);
+}
+
+.browse-link{
+  color: var(--blue);
+  font-weight:900;
+  text-decoration: underline;
+}
+
+/* File Preview */
+.file-preview{
+  width: 100%;
+  max-width: 520px;
+  margin-top: 4px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  background: rgba(255,255,255,0.95);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:12px 14px;
+}
+
+.file-preview i{
+  font-size:26px;
+  color: var(--blue);
+}
+
+.file-preview h4{
+  margin:0;
+  font-size:13px;
+  font-weight:900;
+  color:#0f172a;
+}
+
+.file-preview p{
+  margin:0;
+  font-size:12px;
+  color: var(--muted);
+  font-weight:700;
+}
+
+.remove-file{
+  width:40px;
+  height:40px;
+  border-radius:14px;
+  border:none;
+  cursor:pointer;
+  background: rgba(239,68,68,0.10);
+  color:#dc2626;
+  font-size:16px;
+}
+
+/* Upload Button */
+.parse-btn{
+  margin-top:8px;
+  width: 100%;
+  max-width: 520px;
+  background: var(--blue);
+  color:white;
+  border:none;
+  padding:14px 16px;
+  border-radius:16px;
+  cursor:pointer;
+  font-weight:900;
+  transition: .2s ease;
+}
+
+.parse-btn:disabled{
+  opacity: 0.6;
+  cursor:not-allowed;
+}
+
+.parse-btn:hover{
+  transform: translateY(-2px);
+}
+
+/* Right tips card */
+.mini-card h3{
+  font-size:16px;
+  font-weight:900;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.mini-card ul{
+  list-style:none;
+  margin-top:12px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.mini-card li{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  color: var(--muted);
+  font-weight:800;
+  font-size:13px;
+}
+
+@media(max-width: 1000px){
+  .upload-card{ grid-template-columns: 1fr; }
+}
+
+/* ============================
+   DARK MODE - Upload Page
+============================ */
+
+/* Cards */
+body[data-theme="dark"] .upload-left,
+body[data-theme="dark"] .upload-right {
+  background: rgba(20, 24, 35, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
+}
+
+body[data-theme="dark"] .upload-left h2 {
+  color: #f8fafc;
+}
+
+body[data-theme="dark"] .upload-left p {
+  color: #94a3b8;
+}
+
+/* Drop Zone */
+body[data-theme="dark"] .drop-zone {
+  border: 2px dashed rgba(255, 255, 255, 0.18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+}
+
+body[data-theme="dark"] .drop-zone.dragover {
+  border-color: #60a5fa;
+  box-shadow: 0 12px 45px rgba(59, 130, 246, 0.28);
+}
+
+/* Drop Icon */
+body[data-theme="dark"] .drop-icon {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+body[data-theme="dark"] .drop-icon i {
+  color: #60a5fa;
+}
+
+/* Drop zone text */
+body[data-theme="dark"] .drop-zone h3 {
+  color: #f8fafc;
+}
+
+body[data-theme="dark"] .drop-zone p {
+  color: #94a3b8;
+}
+
+body[data-theme="dark"] .browse-link {
+  color: #60a5fa;
+}
+
+/* File Preview */
+body[data-theme="dark"] .file-preview {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+body[data-theme="dark"] .file-preview i {
+  color: #60a5fa;
+}
+
+body[data-theme="dark"] .file-preview h4 {
+  color: #f8fafc;
+}
+
+body[data-theme="dark"] .file-preview p {
+  color: #94a3b8;
+}
+
+/* Remove file button */
+body[data-theme="dark"] .remove-file {
+  background: rgba(239, 68, 68, 0.14);
+  color: #f87171;
+}
+
+/* Upload button */
+body[data-theme="dark"] .parse-btn {
+  background: #2563eb;
+}
+
+body[data-theme="dark"] .parse-btn:hover {
+  background: #1d4ed8;
+}
+
+/* Right tips card */
+body[data-theme="dark"] .mini-card h3 {
+  color: #f8fafc;
+}
+
+body[data-theme="dark"] .mini-card li {
+  color: #94a3b8;
+}
