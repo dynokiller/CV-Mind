@@ -1,24 +1,107 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<div class="match-header">
-  <h2><i class="fa-solid fa-briefcase"></i> Recommended Jobs</h2>
-</div>
-
-<div class="job-grid">
-  <div class="job-card">
-    <h3>Cloud Engineer</h3>
-    <p><i class="fa-solid fa-location-dot"></i> Remote</p>
-    <p><i class="fa-solid fa-star"></i> Match: 88%</p>
-    <button class="apply-btn">View Details</button>
+<div class="match-container">
+  <div class="match-header">
+    <h2><i class="fa-solid fa-crosshairs"></i> AI Job Matcher</h2>
+    <p>Compare your resumes against specific job descriptions to see your match score.</p>
   </div>
 
-  <div class="job-card">
-    <h3>Python Developer</h3>
-    <p><i class="fa-solid fa-location-dot"></i> Bangalore</p>
-    <p><i class="fa-solid fa-star"></i> Match: 79%</p>
-    <button class="apply-btn">View Details</button>
+  <div class="match-form-card">
+    <form action="/matching" method="POST" id="matchingForm">
+      <div class="form-group">
+        <label for="resume_id">Select Resume</label>
+        <select name="resume_id" id="resume_id" required>
+          <option value="" disabled selected>Choose a parsed resume...</option>
+          {% for res in resumes %}
+          <option value="{{ res._id }}">{{ res.candidate_name }} - {{ res.predicted_domain }} ({{ res.match_score }}%)</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="job_description">Paste Job Description</label>
+        <textarea name="job_description" id="job_description" rows="10" placeholder="Paste the job requirements, responsibilities, and skills here..." required></textarea>
+      </div>
+
+      <button type="submit" class="match-btn">
+        <span class="btn-text">Analyze Match</span>
+        <div class="loader" style="display:none;"></div>
+      </button>
+    </form>
+  </div>
+
+  <div class="recommendations-section">
+    <h3><i class="fa-solid fa-wand-magic-sparkles"></i> Recommended Roles for You</h3>
+    <div class="job-grid">
+      <div class="job-card">
+        <div class="job-icon"><i class="fa-solid fa-server"></i></div>
+        <div class="job-details">
+          <h3>Backend Engineer</h3>
+          <p>Global Tech Solutions • Remote</p>
+          <div class="match-badge">94% Match</div>
+        </div>
+        <button class="small-btn">View</button>
+      </div>
+      <div class="job-card">
+        <div class="job-icon"><i class="fa-solid fa-laptop-code"></i></div>
+        <div class="job-details">
+          <h3>Full Stack Developer</h3>
+          <p>Innovate Labs • New York</p>
+          <div class="match-badge">88% Match</div>
+        </div>
+        <button class="small-btn">View</button>
+      </div>
+    </div>
   </div>
 </div>
+
+<style>
+  .match-container { max-width: 900px; margin: 0 auto; }
+  .match-header { margin-bottom: 30px; }
+  .match-header h2 { font-size: 1.8rem; color: var(--text); margin-bottom: 8px; }
+  .match-header p { color: #64748b; }
+
+  .match-form-card { background: var(--card-bg); padding: 30px; border-radius: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.05); margin-bottom: 40px; }
+  .form-group { margin-bottom: 25px; }
+  .form-group label { display: block; margin-bottom: 10px; font-weight: 600; color: var(--text); }
+  .form-group select, .form-group textarea { width: 100%; padding: 15px; border: 2px solid #e2e8f0; border-radius: 12px; font-family: inherit; font-size: 1rem; transition: all 0.3s; background: white; }
+  .form-group select:focus, .form-group textarea:focus { border-color: #5271ff; outline: none; box-shadow: 0 0 0 4px rgba(82, 113, 255, 0.1); }
+  
+  .match-btn { width: 100%; padding: 16px; background: #5271ff; color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; justify-content: center; align-items: center; }
+  .match-btn:hover { background: #4159cc; transform: translateY(-2px); }
+
+  .recommendations-section h3 { margin-bottom: 20px; color: var(--text); display: flex; align-items: center; gap: 10px; }
+  .job-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+  .job-card { background: var(--card-bg); padding: 20px; border-radius: 18px; display: flex; align-items: center; gap: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.05); }
+  .job-icon { width: 50px; height: 50px; background: rgba(82, 113, 255, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #5271ff; font-size: 1.5rem; }
+  .job-details h3 { font-size: 1rem; margin-bottom: 2px; }
+  .job-details p { font-size: 0.85rem; color: #64748b; margin-bottom: 8px; }
+  .match-badge { display: inline-block; padding: 4px 10px; background: #dcfce7; color: #15803d; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+  .job-card .small-btn { margin-left: auto; }
+
+  /* Loader */
+  .loader { border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 3px solid #fff; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+
+<script>
+  document.getElementById('matchingForm').addEventListener('submit', function(e) {
+    const btn = this.querySelector('.match-btn');
+    const text = btn.querySelector('.btn-text');
+    const loader = btn.querySelector('.loader');
+    
+    text.style.display = 'none';
+    loader.style.display = 'block';
+    btn.disabled = true;
+    
+    setTimeout(() => {
+        alert("Analyzing your match... (Backend integration in progress)");
+        text.style.display = 'block';
+        loader.style.display = 'none';
+        btn.disabled = false;
+    }, 2000);
+  });
+</script>
 
 {% endblock %}

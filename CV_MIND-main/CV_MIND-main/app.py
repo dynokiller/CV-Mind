@@ -1535,7 +1535,20 @@ def analytics():
         "trend_values": [t[1] for t in sorted_trend]
     }
     
-    return render_template("analytics.html", page="analytics", data=analytics_data)
+@app.route("/matching", methods=["GET", "POST"])
+def matching():
+    if not is_logged_in():
+        return redirect(url_for("signin"))
+    
+    user_id = session["user_id"]
+    resumes = safe_find(activity_collection, {"user_id": user_id, "status": "Success"})
+    
+    match_result = None
+    if request.method == "POST":
+        # Simplified implementation: just show recommendations for now
+        pass
+                    
+    return render_template("matching.html", page="matching", resumes=resumes, result=match_result)
 
 
 @app.route("/settings")

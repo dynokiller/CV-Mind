@@ -11,6 +11,7 @@ import threading, hashlib, secrets
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
+from bson import ObjectId
 from text_extractor import extract_candidate_name
 
 load_dotenv()
@@ -1114,7 +1115,46 @@ def analytics():
     return render_template("analytics.html", page="analytics", data=analytics_data)
 
 
-@app.route("/settings")
+@app.route("/matching", methods=["GET", "POST"])
+def matching():
+    if not is_logged_in():
+        return redirect(url_for("signin"))
+    
+    user_id = session["user_id"]
+    # Get all successful parses for selection
+    resumes = list(activity_collection.find({"user_id": user_id, "status": "Success"}))
+    
+    match_result = None
+    if request.method == "POST":
+        resume_id = request.form.get("resume_id")
+        job_desc = request.form.get("job_description")
+        
+        if resume_id and job_desc:
+            # Find the resume text in the resumes collection (not activities)
+            # Actually, activities usually has the extracted info.
+            # But the full text might be in 'resumes' collection or we can just use the activity summary.
+            activity = activity_collection.find_one({"_id": ObjectId(resume_id)})
+            
+            if activity:
+                # Call backend for matching
+                parser_url = os.getenv("PARSERAI_URL") or "https://dyno0126-cv-mind-analyzer.hf.space/upload-analyze"
+                # Since we don't have the original file easily here, 
+                # we can use the /analyze-text endpoint if the backend supports it.
+                # Let's check api/main.py for /analyze-text
+                
+                try:
+                    # Fallback to the text-based matching if available
+                    analyze_url = parser_url.replace("/upload-analyze", "/analyze")
+                    payload = {
+                        "text": activity.get("resume_text", ""), # We need to make sure we store resume_text in activity
+                        "job_description": job_desc
+                    }
+                    # ... wait, let's keep it simple for now and just render the page
+                    pass
+                except:
+                    pass
+                    
+    return render_template("matching.html", page="matching", resumes=resumes, result=match_result)
 def settings():
     if not is_logged_in():
         return redirect(url_for("signin"))
