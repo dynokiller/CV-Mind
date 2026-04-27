@@ -5,6 +5,7 @@ stats_collection = []
 activity_collection = []
 file_integrity_collection = []
 reset_tokens_collection = []
+from werkzeug.middleware.proxy_fix import ProxyFix
 from itsdangerous import URLSafeTimedSerializer
 from werkzeug.security import generate_password_hash, check_password_hash
 from authlib.integrations.flask_client import OAuth
@@ -12,7 +13,6 @@ import os, time, requests, pytz, random, re, uuid
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from zoneinfo import ZoneInfo
 import threading
 import hashlib
 import secrets
@@ -20,7 +20,17 @@ import secrets
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallbacksecretkey")
+app.secret_key = os.getenv("FLASK_SECRET_KEY") or os.getenv("SECRET_KEY") or "fallbacksecretkey"
+
+# Fix for Vercel/Proxy (solves Google OAuth CSRF issues)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+# Security headers for session cookies
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+)
 
 
 # ----------------------------
@@ -52,18 +62,15 @@ google = oauth.register(
     client_kwargs={"scope": "openid email profile"},
 )
 
+# Fallback secret key for itsdangerous
 serializer = URLSafeTimedSerializer(
-    app.secret_key
+    app.secret_key if app.secret_key else "fallbacksecretkey"
 )
 
 # ----------------------------
 # Helpers
 # ----------------------------
 
-
-IST = ZoneInfo("Asia/Kolkata")
-
-now_ist = datetime.now(IST)
 
 def safe_find_one(collection, query):
     if collection is None or not isinstance(collection, list):
@@ -72,6 +79,11 @@ def safe_find_one(collection, query):
         match = True
         for k, v in query.items():
             if item.get(k) != v:
+                match = False
+                break
+        if match:
+            return item
+    return None
                 match = False
                 break
         if match:
@@ -286,6 +298,15 @@ def get_user_stats(user_id: str):
     if not stats:
         create_initial_stats(user_id)
         stats = safe_find_one(stats_collection, {"user_id": user_id})
+    
+    # Final safety check
+    if not stats:
+        return {
+            "total_resumes": 0,
+            "parsed_success": 0,
+            "avg_match_score": 0,
+            "processing_time": 0
+        }
     return stats
 
 
@@ -1298,12 +1319,11 @@ def upload_resume():
             )
 
     if activity_collection is not None and stats_collection is not None:
-        scores = list(safe_find(activity_collection, 
-            {"user_id": user_id, "match_score": {"$ne": None}},
-            {"match_score": 1}
-        ))
+        # Simplified query for in-memory list (safe_find doesn't support $ne)
+        all_user_activities = safe_find(activity_collection, {"user_id": user_id})
+        scores = [a["match_score"] for a in all_user_activities if a.get("match_score") is not None]
 
-        avg = round(sum([s["match_score"] for s in scores]) / len(scores), 2) if scores else 0
+        avg = round(sum(scores) / len(scores), 2) if scores else 0
 
         safe_update_one(stats_collection, 
             {"user_id": user_id},
