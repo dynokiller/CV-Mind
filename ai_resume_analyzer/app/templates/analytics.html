@@ -1,22 +1,134 @@
 {% extends "layout.html" %}
 {% block content %}
 
+<div class="analytics-header">
+  <h2><i class="fa-solid fa-chart-line"></i> Advanced Analytics</h2>
+  <p>Detailed breakdown of your resume parsing activity and skills.</p>
+</div>
+
 <div class="analytics-grid">
   <div class="card-box">
     <h3><i class="fa-solid fa-chart-pie"></i> Resume Success Ratio</h3>
-    <div class="chart-placeholder">Pie Chart Placeholder</div>
+    <div style="height: 300px; width: 100%;">
+      <canvas id="statusChart"></canvas>
+    </div>
   </div>
 
   <div class="card-box">
-    <h3><i class="fa-solid fa-code"></i> Top Skills</h3>
-    <div class="chart-placeholder">Skills Chart Placeholder</div>
+    <h3><i class="fa-solid fa-briefcase"></i> Domain Distribution</h3>
+    <div style="height: 300px; width: 100%;">
+      <canvas id="domainChart"></canvas>
+    </div>
   </div>
 
   <div class="card-box full">
-    <h3><i class="fa-solid fa-chart-line"></i> Resumes Parsed Over Time</h3>
-    <div class="chart-placeholder">Line Chart Placeholder</div>
+    <h3><i class="fa-solid fa-code"></i> Top Skills Identified</h3>
+    <div style="height: 350px; width: 100%;">
+      <canvas id="topSkillsChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card-box full">
+    <h3><i class="fa-solid fa-calendar-days"></i> Parsing Activity Over Time</h3>
+    <div style="height: 300px; width: 100%;">
+      <canvas id="activityTrendChart"></canvas>
+    </div>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const data = {{ data | tojson | safe }};
+
+    // 1. Status Chart (Pie)
+    new Chart(document.getElementById('statusChart'), {
+      type: 'doughnut',
+      data: {
+        labels: data.status_labels,
+        datasets: [{
+          data: data.status_values,
+          backgroundColor: ['#2ecc71', '#e74c3c', '#f1c40f'],
+          borderWidth: 0
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+    });
+
+    // 2. Domain Chart (Bar)
+    new Chart(document.getElementById('domainChart'), {
+      type: 'bar',
+      data: {
+        labels: data.domain_labels,
+        datasets: [{
+          label: 'Count',
+          data: data.domain_values,
+          backgroundColor: '#5271ff',
+          borderRadius: 8
+        }]
+      },
+      options: { 
+        indexAxis: 'y',
+        responsive: true, 
+        maintainAspectRatio: false, 
+        plugins: { legend: { display: false } } 
+      }
+    });
+
+    // 3. Top Skills Chart (Horizontal Bar)
+    new Chart(document.getElementById('topSkillsChart'), {
+      type: 'bar',
+      data: {
+        labels: data.skill_labels,
+        datasets: [{
+          label: 'Frequency',
+          data: data.skill_values,
+          backgroundColor: '#7c3aed',
+          borderRadius: 5
+        }]
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        plugins: { legend: { display: false } } 
+      }
+    });
+
+    // 4. Activity Trend (Line)
+    new Chart(document.getElementById('activityTrendChart'), {
+      type: 'line',
+      data: {
+        labels: data.trend_labels,
+        datasets: [{
+          label: 'Uploads',
+          data: data.trend_values,
+          borderColor: '#5271ff',
+          backgroundColor: 'rgba(82, 113, 255, 0.1)',
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } 
+      }
+    });
+  });
+</script>
+
+<style>
+  .analytics-header { margin-bottom: 30px; }
+  .analytics-header h2 { color: var(--text); font-size: 1.8rem; margin-bottom: 5px; }
+  .analytics-header p { color: #64748b; }
+  .analytics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 25px; }
+  .card-box { background: var(--card-bg); padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+  .card-box h3 { font-size: 1.1rem; margin-bottom: 20px; color: var(--text); }
+  .card-box.full { grid-column: span 2; }
+  @media (max-width: 768px) {
+    .analytics-grid { grid-template-columns: 1fr; }
+    .card-box.full { grid-column: span 1; }
+  }
+</style>
+
 {% endblock %}
-analytics.css

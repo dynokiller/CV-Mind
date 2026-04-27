@@ -1063,7 +1063,55 @@ def parsed():
 def analytics():
     if not is_logged_in():
         return redirect(url_for("signin"))
-    return render_template("analytics.html", page="analytics")
+    
+    user_id = session["user_id"]
+    activities = list(activity_collection.find({"user_id": user_id}))
+    
+    # 1. Success vs Error Ratio
+    success_count = sum(1 for a in activities if a.get("status") == "Success")
+    error_count = sum(1 for a in activities if a.get("status") == "Error")
+    pending_count = sum(1 for a in activities if a.get("status") == "Pending")
+    
+    # 2. Domain Distribution
+    domain_counts = {}
+    for a in activities:
+        domain = a.get("predicted_domain", "Unknown")
+        if domain:
+            domain_counts[domain] = domain_counts.get(domain, 0) + 1
+            
+    # 3. Top Skills
+    skill_freq = {}
+    for a in activities:
+        for skill in a.get("strengths", []):
+            skill_freq[skill] = skill_freq.get(skill, 0) + 1
+            
+    # 4. Monthly/Daily Trend
+    trend_data = {}
+    for a in activities:
+        dt = a.get("upload_date")
+        if dt:
+            if isinstance(dt, str):
+                try:
+                    dt = datetime.fromisoformat(dt)
+                except:
+                    continue
+            date_str = dt.strftime("%Y-%m-%d")
+            trend_data[date_str] = trend_data.get(date_str, 0) + 1
+            
+    sorted_trend = sorted(trend_data.items())
+    
+    analytics_data = {
+        "status_labels": ["Success", "Error", "Pending"],
+        "status_values": [success_count, error_count, pending_count],
+        "domain_labels": list(domain_counts.keys()),
+        "domain_values": list(domain_counts.values()),
+        "skill_labels": sorted(skill_freq, key=skill_freq.get, reverse=True)[:10],
+        "skill_values": sorted(skill_freq.values(), reverse=True)[:10],
+        "trend_labels": [t[0] for t in sorted_trend],
+        "trend_values": [t[1] for t in sorted_trend]
+    }
+    
+    return render_template("analytics.html", page="analytics", data=analytics_data)
 
 
 @app.route("/settings")
