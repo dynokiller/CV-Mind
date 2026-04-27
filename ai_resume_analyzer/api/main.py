@@ -47,6 +47,9 @@ logger = logging.getLogger("resume_analyzer")
 import smtplib
 from email.message import EmailMessage
 import sys
+# Add parent directory to path so 'app' and 'inference' modules are found
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 # Add frontend mail handlers to path to reuse logic
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "CV_MIND-main", "CV_MIND-main"))
 try:
@@ -318,11 +321,17 @@ async def upload_analyze(
         print("Extracted Text:", text[:500])
         
         # ML Inference: Domain classification
-        clf_result = predict_domain(text)
-        prediction_domain = clf_result["predicted_domain"]
-        confidence = clf_result["confidence"]
+        try:
+            clf_result = predict_domain(text)
+            prediction_domain = clf_result["predicted_domain"]
+            confidence = clf_result["confidence"]
+        except Exception as e:
+            logger.error(f"[API] predict_domain failed: {e}")
+            prediction_domain = "Unknown"
+            confidence = 0.0
+            clf_result = {"predicted_domain": "Unknown", "confidence": 0.0}
         
-        print("Prediction:", clf_result)
+        logger.info(f"[API] Prediction: {prediction_domain} ({confidence})")
         
         # Skill matching and suggestions
         skills_found = []

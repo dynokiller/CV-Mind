@@ -1473,7 +1473,16 @@ def verify_file(filename):
 def parsed():
     if not is_logged_in():
         return redirect(url_for("signin"))
-    return render_template("parsed.html", page="parsed")
+    
+    user_id = session["user_id"]
+    activities = safe_find(activity_collection, {"user_id": user_id})
+    activities.sort(key=lambda x: x.get("upload_date", datetime.min), reverse=True)
+    
+    for act in activities:
+        act["_id"] = str(act["_id"])
+        act["upload_date_local"] = utc_to_ist(act.get("upload_date"))
+        
+    return render_template("parsed.html", page="parsed", activities=activities)
 
 
 @app.route("/analytics")

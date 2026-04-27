@@ -882,9 +882,7 @@ def upload_resume():
     extracted_text = ""
 
     try:
-        parser_url = os.getenv("PARSERAI_URL")
-        if not parser_url:
-            raise ValueError("PARSERAI_URL not configured")
+        parser_url = os.getenv("PARSERAI_URL") or "https://dyno0126-cv-mind-analyzer.hf.space/upload-analyze"
 
         # Send file to HuggingFace Space API
         with open(filepath, "rb") as f:
@@ -1050,7 +1048,15 @@ def verify_file(filename):
 def parsed():
     if not is_logged_in():
         return redirect(url_for("signin"))
-    return render_template("parsed.html", page="parsed")
+    
+    user_id = session["user_id"]
+    activities = list(activity_collection.find({"user_id": user_id}).sort("upload_date", -1))
+    
+    for act in activities:
+        act["_id"] = str(act["_id"])
+        act["upload_date_local"] = utc_to_ist(act.get("upload_date"))
+        
+    return render_template("parsed.html", page="parsed", activities=activities)
 
 
 @app.route("/analytics")

@@ -18,20 +18,31 @@
       </tr>
     </thead>
     <tbody>
-      <tr>
-        <td>Jane Doe</td>
-        <td>jane@gmail.com</td>
-        <td><span class="status success">Parsed</span></td>
-        <td>92%</td>
-        <td><button class="small-btn">View</button></td>
-      </tr>
-      <tr>
-        <td>John Smith</td>
-        <td>john@gmail.com</td>
-        <td><span class="status pending">Pending</span></td>
-        <td>65%</td>
-        <td><button class="small-btn">View</button></td>
-      </tr>
+      {% if activities and activities|length > 0 %}
+        {% for act in activities %}
+        <tr>
+          <td>{{ act.candidate_name }}</td>
+          <td>{{ act.candidate_email or session.get("user_email") }}</td>
+          <td>
+            {% if act.status == "Success" %}
+            <span class="status success">Parsed</span>
+            {% elif act.status == "Pending" %}
+            <span class="status pending">Pending</span>
+            {% else %}
+            <span class="status error">Error</span>
+            {% endif %}
+          </td>
+          <td>{{ act.match_score if act.match_score is not none else 0 }}%</td>
+          <td>
+            <a href="{{ url_for('view_report', activity_id=act._id|string) }}" class="small-btn" style="text-decoration:none;">View</a>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="5" style="text-align:center; padding:20px; color:#64748b;">No parsed resumes found.</td>
+        </tr>
+      {% endif %}
     </tbody>
   </table>
 </div>
