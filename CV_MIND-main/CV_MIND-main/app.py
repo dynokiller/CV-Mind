@@ -84,11 +84,6 @@ def safe_find_one(collection, query):
         if match:
             return item
     return None
-                match = False
-                break
-        if match:
-            return item
-    return None
 
 def safe_insert(collection, data):
     if collection is not None and isinstance(collection, list):
