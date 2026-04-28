@@ -1155,10 +1155,107 @@ def matching():
                     pass
                     
     return render_template("matching.html", page="matching", resumes=resumes, result=match_result)
+
+
+@app.route("/settings")
 def settings():
     if not is_logged_in():
         return redirect(url_for("signin"))
     return render_template("settings.html", page="settings")
+
+
+# ----------------------------
+# Admin Panel
+# ----------------------------
+@app.route("/admin")
+def admin():
+    if not is_logged_in():
+        return redirect(url_for("signin"))
+        
+    # Restrict to specific admin email
+    if session.get("user_email") != "usecvmind@gmail.com":
+        flash("Access denied. Admin privileges required.", "error")
+        return redirect(url_for("dashboard"))
+    
+    # 1. Gather Users and basic stats
+    all_users = list(user_collection.find({}))
+    total_users = len(all_users)
+    
+    now = datetime.now()
+    week_ago = now - timedelta(days=7)
+    month_ago = now - timedelta(days=30)
+    
+    weekly_active = 0
+    monthly_active = 0
+    
+    user_stats_list = []
+    
+    total_parses_platform = 0
+    total_success_platform = 0
+    
+    for u in all_users:
+        uid = u.get("user_id")
+        
+        # Check activity for active status (based on last_updated or by querying activity_collection)
+        # Using activity_collection for more accuracy on parsing activity:
+        user_activities = list(activity_collection.find({"user_id": uid}))
+        last_active = None
+        
+        domain_counts = {}
+        for a in user_activities:
+            dt = a.get("upload_date")
+            if dt:
+                # dt might be naive or aware, convert appropriately if needed. Assuming naive local or UTC.
+                if isinstance(dt, datetime):
+                    if last_active is None or dt > last_active:
+                        last_active = dt
+                
+            domain = a.get("predicted_domain")
+            if domain and domain != "Unknown":
+                domain_counts[domain] = domain_counts.get(domain, 0) + 1
+        
+        # Most common domain (Behavior pattern)
+        top_domain = "N/A"
+        if domain_counts:
+            top_domain = max(domain_counts, key=domain_counts.get)
+            
+        if last_active:
+            if last_active > week_ago:
+                weekly_active += 1
+            if last_active > month_ago:
+                monthly_active += 1
+                
+        # Parse stats
+        stats = stats_collection.find_one({"user_id": uid}) or {}
+        parses = stats.get("total_resumes", 0)
+        successes = stats.get("parsed_success", 0)
+        
+        total_parses_platform += parses
+        total_success_platform += successes
+        
+        success_rate = round((successes / parses * 100) if parses > 0 else 0)
+        
+        user_stats_list.append({
+            "name": u.get("name", "Unknown"),
+            "email": u.get("email", ""),
+            "total_resumes": parses,
+            "success_rate": success_rate,
+            "last_active": utc_to_ist(last_active) if last_active else "Never",
+            "behavior_pattern": top_domain
+        })
+
+    platform_success_rate = round((total_success_platform / total_parses_platform * 100) if total_parses_platform > 0 else 0)
+    
+    admin_data = {
+        "total_users": total_users,
+        "weekly_active": weekly_active,
+        "monthly_active": monthly_active,
+        "total_parses": total_parses_platform,
+        "platform_success_rate": platform_success_rate,
+        "users": user_stats_list
+    }
+    
+    return render_template("admin.html", page="admin", data=admin_data)
 
 
 # ----------------------------

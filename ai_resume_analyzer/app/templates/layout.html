@@ -118,6 +118,15 @@
                 <i class="fa-solid fa-briefcase"></i> Job Matching
               </a>
 
+              {% if session.get('user_email') == 'usecvmind@gmail.com' %}
+              <a
+                class="{% if page=='admin' %}active{% endif %}"
+                href="/admin"
+              >
+                <i class="fa-solid fa-user-shield"></i> Admin Panel
+              </a>
+              {% endif %}
+
               <a
                 class="{% if page=='settings' %}active{% endif %}"
                 href="/settings"

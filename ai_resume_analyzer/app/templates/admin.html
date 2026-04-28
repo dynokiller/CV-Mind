@@ -1,0 +1,182 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="analytics-header">
+  <h2><i class="fa-solid fa-user-shield"></i> Admin Dashboard</h2>
+  <p>Platform-wide overview of user activity and parsing performance.</p>
+</div>
+
+<!-- Key Metrics Cards -->
+<div class="analytics-grid">
+  <div class="card-box metric-card">
+    <div class="metric-icon"><i class="fa-solid fa-users"></i></div>
+    <div class="metric-details">
+      <h3>Total Users</h3>
+      <p class="metric-value">{{ data.total_users }}</p>
+    </div>
+  </div>
+
+  <div class="card-box metric-card">
+    <div class="metric-icon"><i class="fa-solid fa-calendar-week"></i></div>
+    <div class="metric-details">
+      <h3>Weekly Active</h3>
+      <p class="metric-value">{{ data.weekly_active }}</p>
+    </div>
+  </div>
+
+  <div class="card-box metric-card">
+    <div class="metric-icon"><i class="fa-solid fa-calendar-days"></i></div>
+    <div class="metric-details">
+      <h3>Monthly Active</h3>
+      <p class="metric-value">{{ data.monthly_active }}</p>
+    </div>
+  </div>
+
+  <div class="card-box metric-card">
+    <div class="metric-icon"><i class="fa-solid fa-file-invoice"></i></div>
+    <div class="metric-details">
+      <h3>Global Success Rate</h3>
+      <p class="metric-value">{{ data.platform_success_rate }}%</p>
+      <p class="metric-subtitle">{{ data.total_parses }} total parses</p>
+    </div>
+  </div>
+</div>
+
+<!-- User Activity Table -->
+<div class="card-box full" style="margin-top: 25px;">
+  <h3><i class="fa-solid fa-table-list"></i> User Activity & Statistics</h3>
+  
+  <div class="table-responsive">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>User Name</th>
+          <th>Email</th>
+          <th>Documents Parsed</th>
+          <th>Success Rate</th>
+          <th>Behavior Pattern (Top Domain)</th>
+          <th>Last Active (IST)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in data.users %}
+        <tr>
+          <td><strong>{{ u.name }}</strong></td>
+          <td>{{ u.email }}</td>
+          <td>{{ u.total_resumes }}</td>
+          <td>
+            <span class="badge {% if u.success_rate >= 80 %}success{% elif u.success_rate >= 50 %}warning{% else %}danger{% endif %}">
+              {{ u.success_rate }}%
+            </span>
+          </td>
+          <td>
+            {% if u.behavior_pattern == 'N/A' %}
+              <span style="color: #94a3b8; font-style: italic;">No Data</span>
+            {% else %}
+              {{ u.behavior_pattern }}
+            {% endif %}
+          </td>
+          <td>{{ u.last_active }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .analytics-header { margin-bottom: 30px; }
+  .analytics-header h2 { color: var(--text); font-size: 1.8rem; margin-bottom: 5px; }
+  .analytics-header p { color: #64748b; }
+  
+  .analytics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  
+  .card-box { 
+    background: var(--card-bg); 
+    padding: 25px; 
+    border-radius: 20px; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05); 
+  }
+  .card-box h3 { font-size: 1.1rem; margin-bottom: 15px; color: var(--text); }
+  .card-box.full { grid-column: 1 / -1; }
+  
+  /* Metric Cards Styling */
+  .metric-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+  .metric-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 15px;
+    background: rgba(82, 113, 255, 0.1);
+    color: #5271ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+  }
+  .metric-details h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #64748b;
+  }
+  .metric-value {
+    margin: 5px 0 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .metric-subtitle {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-top: 3px;
+  }
+  
+  /* Table Styling */
+  .table-responsive {
+    overflow-x: auto;
+  }
+  .admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+  }
+  .admin-table th, .admin-table td {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+  }
+  .admin-table th {
+    background: rgba(0,0,0,0.02);
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+  }
+  .admin-table tbody tr:hover {
+    background: rgba(82, 113, 255, 0.02);
+  }
+  
+  /* Badges */
+  .badge {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .badge.success { background: rgba(46, 204, 113, 0.1); color: #2ecc71; }
+  .badge.warning { background: rgba(241, 196, 15, 0.1); color: #f39c12; }
+  .badge.danger { background: rgba(231, 76, 60, 0.1); color: #e74c3c; }
+  
+  @media (max-width: 1024px) {
+    .analytics-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 768px) {
+    .analytics-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+{% endblock %}
