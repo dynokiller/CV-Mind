@@ -3,7 +3,7 @@ from authlib.integrations.flask_client import OAuth
 from db import user_collection, stats_collection, activity_collection, file_integrity_collection, reset_tokens_collection   
 from itsdangerous import URLSafeTimedSerializer
 from werkzeug.middleware.proxy_fix import ProxyFix
-import sys, os, time, requests, pytz, random, re, uuid, filetype
+import sys, os, time, smtplib, requests, pytz, random, re, uuid, filetype
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from zoneinfo import ZoneInfo
@@ -165,46 +165,38 @@ def generate_otp():
     return str(random.randint(100000, 999999))
 
 
-def send_mail(
-    email: str,
-    mail_type: str,
-    otp: str = None,
-    redirect: str = None,
-):
-    base_url = os.getenv("SENDMAIL_API_URL")
-
-    if not base_url:
-        return {"success": False, "message": "Mail service not configured"}
-
-    payload = {
-        "email": email,
-        "type": mail_type
-    }
-
-    if otp:
-        payload["otp"] = otp
-    if redirect:
-        payload["redirect"] = redirect
-
+def send_mail(email: str, mail_type: str, otp: str = None, redirect: str = None):
     try:
-        response = requests.post(base_url, json=payload, timeout=20)
-
-        if response.ok:
-            return {"success": True, "message": "Mail sent"}
-
-        print("MAIL URL:", base_url)
-        print("MAIL PAYLOAD:", payload)
-        print("MAIL STATUS:", response.status_code)
-        print("MAIL RESPONSE:", response.text)
+        from mail_service.handlers.otp_mail import build_otp_email
+        from mail_service.handlers.reset_mail import build_reset_email
         
-        return {
-            "success": False,
-            "message": response.json().get("message", "Mail failed")
-        }
-
-    except requests.RequestException:
+        MAIL_EMAIL = os.getenv("MAIL_EMAIL")
+        MAIL_APP_PASSWORD = os.getenv("MAIL_APP_PASSWORD")
+        SMTP_HOST = "smtp.gmail.com"
+        SMTP_PORT = 465
+        
+        if not MAIL_EMAIL or not MAIL_APP_PASSWORD:
+            print("[ERROR] MAIL_EMAIL or MAIL_APP_PASSWORD not set in .env")
+            return {"success": False, "message": "Mail service not configured"}
+            
+        data = {"email": email, "type": mail_type, "otp": otp, "redirect": redirect}
+        
+        if mail_type == "OTP_VERIFY":
+            msg = build_otp_email(data)
+        elif mail_type == "RESET_PASSWORD":
+            msg = build_reset_email(data)
+        else:
+            return {"success": False, "message": f"Invalid mail type: {mail_type}"}
+            
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as smtp:
+            smtp.login(MAIL_EMAIL, MAIL_APP_PASSWORD)
+            smtp.send_message(msg)
+            
+        return {"success": True, "message": "Mail sent successfully"}
+        
+    except Exception as e:
+        print(f"[ERROR] Failed to send email: {e}")
         return {"success": False, "message": "Mail service unreachable"}
-
 
 # ----------------------------
 # Google reCAPTCHA verification
