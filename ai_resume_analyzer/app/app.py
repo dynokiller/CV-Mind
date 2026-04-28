@@ -3,7 +3,7 @@ from authlib.integrations.flask_client import OAuth
 from db import user_collection, stats_collection, activity_collection, file_integrity_collection, reset_tokens_collection   
 from itsdangerous import URLSafeTimedSerializer
 from werkzeug.middleware.proxy_fix import ProxyFix
-import sys, os, time, requests, pytz, random, re, uuid
+import sys, os, time, requests, pytz, random, re, uuid, filetype
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from zoneinfo import ZoneInfo
@@ -14,10 +14,26 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from bson import ObjectId
 from text_extractor import extract_candidate_name
 
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY") or os.getenv("SECRET_KEY") or "fallbacksecretkey"
+# Generate a highly secure random key if none is provided in the environment.
+app.secret_key = os.getenv("FLASK_SECRET_KEY") or os.getenv("SECRET_KEY") or os.urandom(32).hex()
+
+# Enable CSRF Protection globally
+csrf = CSRFProtect(app)
+
+# Setup Rate Limiting to prevent brute-force attacks
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
 
 # Force HTTPS for url_for in production (Vercel)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
@@ -28,6 +44,15 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
 )
+
+@app.after_request
+def set_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    # Existing cache headers (if any) are handled in the other after_request hook
+    return response
 
 
 # ----------------------------
@@ -245,6 +270,7 @@ def index():
 # Signup
 # ----------------------------
 @app.route("/signup", methods=["GET", "POST"])
+@limiter.limit("10 per hour")
 def signup():
 
     if "user_id" in session:
@@ -329,6 +355,7 @@ def signup():
 # Signin
 # ----------------------------
 @app.route("/signin", methods=["GET", "POST"])
+@limiter.limit("15 per minute")
 def signin():
     # If already logged in → dashboard
     if "user_id" in session:
@@ -574,6 +601,7 @@ def sendotp(email):
 # ----------------------------
 
 @app.route("/resend-otp", methods=["POST"])
+@limiter.limit("5 per minute")
 def resend_otp():
     email = session.get("verify_email")
 
@@ -592,6 +620,7 @@ def resend_otp():
 # ----------------------------
 
 @app.route("/forgot_password", methods=["GET", "POST"])
+@limiter.limit("5 per minute")
 def forgot_password():
 
     if request.method == "GET":
@@ -670,6 +699,7 @@ def forgot_password():
 
 
 @app.route("/reset/<token>", methods=["GET", "POST"])
+@limiter.limit("5 per minute")
 def reset_password(token):
 
     token_hash = hashlib.sha256(token.encode()).hexdigest()
@@ -827,6 +857,8 @@ def upload():
 
 
 @app.route("/upload-resume", methods=["POST"])
+@limiter.limit("50 per day")
+@limiter.limit("10 per hour")
 def upload_resume():
     if not is_logged_in():
         return redirect(url_for("signin"))
@@ -837,131 +869,132 @@ def upload_resume():
         flash("No file selected!", "error")
         return redirect(url_for("upload"))
 
-    file = request.files["resume"]
-    if file.filename == "":
+    files = request.files.getlist("resume")
+    if not files or files[0].filename == "":
         flash("No file selected!", "error")
         return redirect(url_for("upload"))
 
-    if not allowed_file(file.filename):
-        flash("Only PDF, DOC, DOCX files are allowed!", "error")
-        return redirect(url_for("upload"))
-
-    file.seek(0, os.SEEK_END)
-    file_length = file.tell()
-    file.seek(0)
-
-    if file_length > MAX_FILE_SIZE:
-        flash("File too large! Max file size is 28MB.", "error")
-        return redirect(url_for("upload"))
-
+    success_count = 0
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-    filename = f"{uuid.uuid4()}_{secure_filename(file.filename)}"
-    filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-    file.save(filepath)
     
-    # ----------------------------
-    # Generate & Store Hash in MongoDB
-    # ----------------------------
-    file_hash = generate_hash(filepath)
+    last_result = None
 
-    file_integrity_collection.insert_one({
-        "user_id": user_id,
-        "filename": filename,
-        "filehash": file_hash,
-        "uploaded_at": datetime.now()
-    })
+    for file in files:
+        if not allowed_file(file.filename):
+            flash(f"Skipped {file.filename}: Only PDF, DOC, DOCX files are allowed!", "warning")
+            continue
 
+        file.seek(0, os.SEEK_END)
+        file_length = file.tell()
+        file.seek(0)
 
-    # ----------------------------
-    # Extract Text & Run Model (via HuggingFace API)
-    # ----------------------------
-    status = "Pending"
-    match_score = None
-    start_time = time.time()
-    process_time = 0
-    result = {}
-    extracted_text = ""
+        if file_length > MAX_FILE_SIZE:
+            flash(f"Skipped {file.filename}: File too large! Max file size is 28MB.", "warning")
+            continue
 
-    try:
-        parser_url = os.getenv("PARSERAI_URL") or "https://dyno0126-cv-mind-analyzer.hf.space/upload-analyze"
-
-        # Send file to HuggingFace Space API
-        with open(filepath, "rb") as f:
-            files = {"file": (filename, f)}
-            response = requests.post(parser_url, files=files, timeout=60)
-            
-        if response.status_code == 200:
-            result = response.json()
-            status = "Success"
-            
-            # Map API fields to Flask session/DB schema
-            match_score = result.get("final_score", 0)
-            extracted_text = result.get("full_resume_text", "")
-            
-            # Map result keys for consistency with existing UI
-            result["matched_keywords"] = result.get("skills_found", [])
-            result["missing_keywords"] = result.get("missing_skills", [])
-            
-        else:
-            status = "Error"
-            print(f"[ERROR] API analysis failed with status {response.status_code}: {response.text}")
-            
-        process_time = round(time.time() - start_time, 2)
+        # --- MALWARE / PAYLOAD PROTECTION (Magic Bytes Check) ---
+        kind = filetype.guess(file.stream)
+        file.seek(0) # reset pointer after reading magic bytes
         
-    except Exception as e:
-        process_time = round(time.time() - start_time, 2)
-        status = "Error"
-        print(f"[ERROR] Analysis failed: {e}")
-        import traceback
-        traceback.print_exc()
+        if kind is None or kind.mime not in ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']:
+            flash(f"Security Alert: Rejected {file.filename}. Invalid file signature detected.", "error")
+            continue
+            
+        filename = f"{uuid.uuid4()}_{secure_filename(file.filename)}"
+        filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        file.save(filepath)
+        
+        file_hash = generate_hash(filepath)
 
-    # Extract name from resume (always runs, even on error)
-    extracted_name = extract_candidate_name(extracted_text)
-    final_candidate_name = extracted_name if extracted_name else session.get("name", "User")
+        file_integrity_collection.insert_one({
+            "user_id": user_id,
+            "filename": filename,
+            "filehash": file_hash,
+            "uploaded_at": datetime.now()
+        })
 
-    # Save to session for dashboard
-    if status == "Success":
-        session['last_result'] = {
-            "name": final_candidate_name,
+        status = "Pending"
+        match_score = None
+        start_time = time.time()
+        process_time = 0
+        result = {}
+        extracted_text = ""
+
+        try:
+            parser_url = os.getenv("PARSERAI_URL") or "https://dyno0126-cv-mind-analyzer.hf.space/upload-analyze"
+
+            with open(filepath, "rb") as f:
+                upload_files = {"file": (filename, f)}
+                response = requests.post(parser_url, files=upload_files, timeout=60)
+                
+            if response.status_code == 200:
+                result = response.json()
+                status = "Success"
+                match_score = result.get("final_score", 0)
+                extracted_text = result.get("full_resume_text", "")
+                
+                result["matched_keywords"] = result.get("skills_found", [])
+                result["missing_keywords"] = result.get("missing_skills", [])
+            else:
+                status = "Error"
+                print(f"[ERROR] API analysis failed with status {response.status_code}: {response.text}")
+                
+            process_time = round(time.time() - start_time, 2)
+            
+        except Exception as e:
+            process_time = round(time.time() - start_time, 2)
+            status = "Error"
+            print(f"[ERROR] Analysis failed: {e}")
+
+        extracted_name = extract_candidate_name(extracted_text)
+        final_candidate_name = extracted_name if extracted_name else session.get("name", "User")
+
+        if status == "Success":
+            last_result = {
+                "name": final_candidate_name,
+                "predicted_domain": result.get("predicted_domain", "Unknown"),
+                "confidence": round(result.get("confidence", 0) * 100, 1),
+                "final_score": match_score,
+                "missing_skills": result.get("missing_keywords", []),
+                "strengths": result.get("matched_keywords", []),
+                "suggestions": result.get("suggestions", []),
+                "latency_ms": round(process_time * 1000)
+            }
+            success_count += 1
+
+        activity_collection.insert_one({
+            "user_id": user_id,
+            "candidate_name": final_candidate_name,
+            "upload_date": datetime.now(),
+            "status": status,
+            "match_score": match_score,
+            "file_name": filename,
             "predicted_domain": result.get("predicted_domain", "Unknown"),
-            "confidence": round(result.get("confidence", 0) * 100, 1),
-            "final_score": match_score,
+            "confidence": result.get("confidence", 0) * 100,
             "missing_skills": result.get("missing_keywords", []),
             "strengths": result.get("matched_keywords", []),
             "suggestions": result.get("suggestions", []),
             "latency_ms": round(process_time * 1000)
-        }
+        })
 
-    activity_collection.insert_one({
-        "user_id": user_id,
-        "candidate_name": final_candidate_name,
-        "upload_date": datetime.now(),
-        "status": status,
-        "match_score": match_score,
-        "file_name": filename,
-        "predicted_domain": result.get("predicted_domain", "Unknown"),
-        "confidence": result.get("confidence", 0) * 100,
-        "missing_skills": result.get("missing_keywords", []),
-        "strengths": result.get("matched_keywords", []),
-        "suggestions": result.get("suggestions", []),
-        "latency_ms": round(process_time * 1000)
-    })
-
-    stats_collection.update_one(
-        {"user_id": user_id},
-        {
-            "$inc": {"total_resumes": 1},
-            "$set": {"processing_time": process_time, "updated_at": datetime.now()}
-        },
-        upsert=True
-    )
-
-    if status == "Success":
         stats_collection.update_one(
             {"user_id": user_id},
-            {"$inc": {"parsed_success": 1}},
+            {
+                "$inc": {"total_resumes": 1},
+                "$set": {"processing_time": process_time, "updated_at": datetime.now()}
+            },
             upsert=True
         )
+
+        if status == "Success":
+            stats_collection.update_one(
+                {"user_id": user_id},
+                {"$inc": {"parsed_success": 1}},
+                upsert=True
+            )
+
+    if last_result:
+        session['last_result'] = last_result
 
     scores = list(activity_collection.find(
         {"user_id": user_id, "match_score": {"$ne": None}},
@@ -975,8 +1008,13 @@ def upload_resume():
         {"$set": {"avg_match_score": avg}}
     )
 
-    flash("Resume uploaded successfully ", "success")
+    if success_count > 0:
+        flash(f"Successfully processed {success_count} resume(s).", "success")
+    else:
+        flash("No resumes were successfully processed.", "error")
+        
     return redirect(url_for("dashboard"))
+
 
 from bson.objectid import ObjectId
 
@@ -1020,7 +1058,10 @@ def verify_file(filename):
         return redirect(url_for("signin"))
 
     user_id = session["user_id"]
-    filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+    
+    # Sanitize the filename to prevent path traversal attacks (e.g. ../../etc/passwd)
+    safe_filename = secure_filename(filename)
+    filepath = os.path.join(app.config["UPLOAD_FOLDER"], safe_filename)
 
     if not os.path.exists(filepath):
         return "File missing from server"

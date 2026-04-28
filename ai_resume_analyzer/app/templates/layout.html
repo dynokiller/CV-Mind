@@ -426,6 +426,7 @@
 
           headers: {
             "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token() }}"
           },
 
           body: JSON.stringify({
@@ -447,6 +448,9 @@
       closeBtn.onclick = () => {
         fetch("/skip-personalization", {
           method: "POST",
+          headers: {
+            "X-CSRFToken": "{{ csrf_token() }}"
+          }
         })
           .then((res) => res.json())
           .then(() => {

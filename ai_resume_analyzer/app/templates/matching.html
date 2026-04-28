@@ -9,6 +9,7 @@
 
   <div class="match-form-card">
     <form action="/matching" method="POST" id="matchingForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <div class="form-group">
         <label for="resume_id">Select Resume</label>
         <select name="resume_id" id="resume_id" required>

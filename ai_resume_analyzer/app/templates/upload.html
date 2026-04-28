@@ -13,12 +13,14 @@
         enctype="multipart/form-data"
         class="upload-form"
       >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <!-- hidden file input -->
         <input
           type="file"
           id="resumeInput"
           name="resume"
           accept=".pdf,.doc,.docx"
+          multiple
           hidden
           required
         />
@@ -86,7 +88,7 @@
   // file picked manually
   resumeInput.addEventListener("change", () => {
     if (resumeInput.files.length > 0) {
-      showFile(resumeInput.files[0]);
+      showFiles(resumeInput.files);
     }
   });
 
@@ -109,26 +111,44 @@
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       resumeInput.files = files;
-      showFile(files[0]);
+      showFiles(files);
     }
   });
 
-  function showFile(file) {
+  function showFiles(files) {
     const allowed = [
       "application/pdf",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "application/msword",
     ];
 
-    if (!allowed.includes(file.type)) {
+    let validFiles = true;
+    for (let i = 0; i < files.length; i++) {
+      if (!allowed.includes(files[i].type)) {
+        validFiles = false;
+        break;
+      }
+    }
+
+    if (!validFiles) {
       alert("Only PDF/DOC/DOCX files are allowed!");
       resumeInput.value = "";
       return;
     }
 
     filePreview.style.display = "flex";
-    fileName.innerText = file.name;
-    fileSize.innerText = (file.size / 1024).toFixed(1) + " KB";
+    if (files.length === 1) {
+      fileName.innerText = files[0].name;
+      fileSize.innerText = (files[0].size / 1024).toFixed(1) + " KB";
+    } else {
+      fileName.innerText = `${files.length} files selected`;
+      let totalSize = 0;
+      for (let i = 0; i < files.length; i++) {
+        totalSize += files[i].size;
+      }
+      fileSize.innerText = (totalSize / 1024).toFixed(1) + " KB total";
+    }
+    
     uploadBtn.disabled = false;
   }
 

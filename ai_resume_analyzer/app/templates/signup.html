@@ -83,6 +83,7 @@
           {% endif %} {% endwith %}
 
           <form id="signupForm" method="POST" action="{{ url_for('signup') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="signup-input-group">
               <label><i class="fa-solid fa-user"></i> Full Name</label>
               <input

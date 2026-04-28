@@ -49,6 +49,7 @@
           <div id="clientErrorContainer"></div>
 
           <form id="signinForm" method="POST" action="{{ url_for('signin') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="signin-input-group">
               <label><i class="fa-solid fa-envelope"></i> Email</label>
               <input
