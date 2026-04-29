@@ -3,7 +3,8 @@ from authlib.integrations.flask_client import OAuth
 from db import user_collection, stats_collection, activity_collection, file_integrity_collection, reset_tokens_collection   
 from itsdangerous import URLSafeTimedSerializer
 from werkzeug.middleware.proxy_fix import ProxyFix
-import sys, os, time, smtplib, requests, pytz, random, re, uuid, filetype
+import sys, os, time, smtplib, requests, pytz, random, re, uuid, filetype, json
+
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from zoneinfo import ZoneInfo
@@ -14,6 +15,8 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from bson import ObjectId
 from text_extractor import extract_candidate_name
 from openai import OpenAI
+import google.generativeai as genai
+
 
 
 from flask_wtf.csrf import CSRFProtect
@@ -1174,20 +1177,65 @@ def matching():
         if not resume_text:
             return jsonify({"success": False, "error": "Resume text is missing. Please re-upload your resume."}), 400
 
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            # Fallback mock if no API key
+        google_key = os.getenv("GOOGLE_API_KEY")
+        openai_key = os.getenv("OPENAI_API_KEY")
+
+        if google_key:
+            try:
+                genai.configure(api_key=google_key)
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                
+                prompt = f"""
+                Compare the following Resume against the Job Description.
+                
+                Resume:
+                {resume_text}
+                
+                Job Description:
+                {job_desc}
+                
+                Provide a JSON response with the following keys:
+                - score: (a number from 0-100)
+                - summary: (brief overview of fit)
+                - matches: [list of matched skills/experience]
+                - missing: [list of gaps]
+                - feedback: (detailed advice to improve the resume for this job)
+                
+                Ensure the response is valid JSON.
+                """
+                
+                response = model.generate_content(
+                    prompt,
+                    generation_config={"response_mime_type": "application/json"}
+                )
+                
+                analysis = json.loads(response.text)
+                return jsonify({
+                    "success": True,
+                    "score": analysis.get("score", 0),
+                    "summary": analysis.get("summary", ""),
+                    "matches": analysis.get("matches", []),
+                    "missing": analysis.get("missing", []),
+                    "feedback": analysis.get("feedback", "")
+                })
+            except Exception as e:
+                print(f"[ERROR] Gemini Match failed: {e}")
+                if not openai_key:
+                    return jsonify({"success": False, "error": f"Gemini analysis failed: {str(e)}"}), 500
+
+        if not openai_key:
+            # Fallback mock if no API keys are available
             return jsonify({
                 "success": True,
                 "score": 75,
-                "summary": "This is a mock analysis because OPENAI_API_KEY is not set in the .env file.",
+                "summary": "This is a mock analysis because no API keys (OpenAI or Google) are set in the .env file.",
                 "matches": ["Skill A", "Skill B"],
                 "missing": ["Skill C"],
-                "feedback": "Please add your OpenAI API key to enable live analysis."
+                "feedback": "Please add an API key (OPENAI_API_KEY or GOOGLE_API_KEY) to enable live analysis."
             })
 
         try:
-            client = OpenAI(api_key=api_key)
+            client = OpenAI(api_key=openai_key)
             prompt = f"""
             Compare the following Resume against the Job Description.
             
@@ -1211,7 +1259,6 @@ def matching():
                 response_format={"type": "json_object"}
             )
             
-            import json
             analysis = json.loads(response.choices[0].message.content)
             return jsonify({
                 "success": True,
@@ -1225,6 +1272,7 @@ def matching():
         except Exception as e:
             print(f"[ERROR] OpenAI Match failed: {e}")
             return jsonify({"success": False, "error": str(e)}), 500
+
             
     # GET request
     resumes = list(activity_collection.find({"user_id": user_id, "status": "Success"}))
