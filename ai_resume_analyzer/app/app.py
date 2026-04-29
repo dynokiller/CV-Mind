@@ -1194,7 +1194,41 @@ def matching():
 def settings():
     if not is_logged_in():
         return redirect(url_for("signin"))
-    return render_template("settings.html", page="settings")
+    user = user_collection.find_one({"user_id": session["user_id"]}) or {}
+    return render_template("settings.html", page="settings", user=user)
+
+@app.route("/change-password", methods=["POST"])
+def change_password():
+    if not is_logged_in():
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    current_pwd = data.get("current", "")
+    new_pwd     = data.get("new_password", "")
+
+    user = user_collection.find_one({"user_id": session["user_id"]})
+    if not user:
+        return jsonify({"status": "error", "message": "User not found."}), 404
+
+    if not user.get("password"):
+        return jsonify({"status": "error", "message": "Cannot change password for Google accounts."}), 400
+
+    if not check_password_hash(user["password"], current_pwd):
+        return jsonify({"status": "error", "message": "Current password is incorrect."}), 400
+
+    if not (
+        6 <= len(new_pwd) <= 15
+        and re.search(r"[A-Z]", new_pwd)
+        and re.search(r"[0-9]", new_pwd)
+        and re.search(r"[@.&\-_]", new_pwd)
+    ):
+        return jsonify({"status": "error", "message": "Password requirements not satisfied."}), 400
+
+    user_collection.update_one(
+        {"user_id": session["user_id"]},
+        {"$set": {"password": generate_password_hash(new_pwd), "last_updated": datetime.now()}}
+    )
+    return jsonify({"status": "ok", "message": "Password updated successfully!"})
 
 
 # ----------------------------
