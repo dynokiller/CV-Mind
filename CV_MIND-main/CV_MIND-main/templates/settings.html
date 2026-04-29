@@ -1,24 +1,597 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<div class="settings-box">
-  <h2><i class="fa-solid fa-gear"></i> Settings</h2>
-
-  <div class="setting-item">
-    <span>Enable Notifications</span>
-    <label class="switch">
-      <input type="checkbox" checked>
-      <span class="slider"></span>
-    </label>
-  </div>
-
-  <div class="setting-item">
-    <span>Auto Resume Parsing</span>
-    <label class="switch">
-      <input type="checkbox">
-      <span class="slider"></span>
-    </label>
-  </div>
+<!-- Toast Notification -->
+<div id="settingsToast" class="s-toast" style="display:none;">
+  <i class="fa-solid fa-circle-check"></i>
+  <span id="toastMsg">Settings saved!</span>
 </div>
 
+<div class="s-page">
+  <!-- Page Header -->
+  <div class="s-header">
+    <div>
+      <h1 class="s-title"><i class="fa-solid fa-gear"></i> Settings</h1>
+      <p class="s-subtitle">Manage your account, preferences and privacy</p>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="s-tabs">
+    <button class="s-tab active" data-tab="profile"><i class="fa-solid fa-user"></i> Profile</button>
+    <button class="s-tab" data-tab="security"><i class="fa-solid fa-shield-halved"></i> Security</button>
+    <button class="s-tab" data-tab="notifications"><i class="fa-solid fa-bell"></i> Notifications</button>
+    <button class="s-tab" data-tab="appearance"><i class="fa-solid fa-palette"></i> Appearance</button>
+    <button class="s-tab" data-tab="privacy"><i class="fa-solid fa-lock"></i> Privacy</button>
+    <button class="s-tab" data-tab="resume"><i class="fa-solid fa-file-lines"></i> Resume AI</button>
+  </div>
+
+  <!-- ─── PROFILE ─────────────────────────────────────────── -->
+  <div class="s-panel active" id="tab-profile">
+    <div class="s-card">
+      <div class="s-card-head"><i class="fa-solid fa-circle-user"></i> Personal Information</div>
+
+      <!-- Avatar Row -->
+      <div class="avatar-row">
+        <div class="big-avatar" id="avatarPreview">
+          {% if session.get("profile_img") %}
+            <img src="{{ session.get('profile_img') }}" alt="avatar" />
+          {% else %}
+            <span>{{ (session.get('name') or 'US')[0:2] | upper }}</span>
+          {% endif %}
+        </div>
+        <div>
+          <p class="avatar-name">{{ session.get('name','User') }}</p>
+          <p class="avatar-email">{{ session.get('user_email','') }}</p>
+          <label class="upload-btn" for="avatarInput">
+            <i class="fa-solid fa-camera"></i> Change Photo
+          </label>
+          <input type="file" id="avatarInput" accept="image/*" style="display:none;" />
+        </div>
+      </div>
+
+      <div class="s-form-grid">
+        <div class="s-field">
+          <label>Full Name</label>
+          <input type="text" id="fullName" value="{{ session.get('name','') }}" placeholder="Your full name" />
+        </div>
+        <div class="s-field">
+          <label>Display Username</label>
+          <input type="text" id="username" value="{{ (session.get('name','user') | lower | replace(' ','_')) }}" placeholder="username" />
+        </div>
+        <div class="s-field">
+          <label>Email Address</label>
+          <input type="email" id="emailField" value="{{ session.get('user_email','') }}" placeholder="you@example.com" />
+        </div>
+        <div class="s-field">
+          <label>Phone Number</label>
+          <input type="tel" id="phone" placeholder="+91 98765 43210" />
+        </div>
+        <div class="s-field">
+          <label>Date of Birth</label>
+          <input type="date" id="dob" />
+        </div>
+        <div class="s-field">
+          <label>Location / City</label>
+          <input type="text" id="location" placeholder="e.g. Mumbai, India" />
+        </div>
+        <div class="s-field s-full">
+          <label>Bio / About Me</label>
+          <textarea id="bio" rows="3" placeholder="Tell us a bit about yourself..."></textarea>
+        </div>
+        <div class="s-field">
+          <label>LinkedIn URL</label>
+          <input type="url" id="linkedin" placeholder="https://linkedin.com/in/username" />
+        </div>
+        <div class="s-field">
+          <label>GitHub / Portfolio</label>
+          <input type="url" id="github" placeholder="https://github.com/username" />
+        </div>
+      </div>
+      <div class="s-actions">
+        <button class="s-btn-primary" onclick="saveSection('profile')">
+          <i class="fa-solid fa-floppy-disk"></i> Save Profile
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECURITY ──────────────────────────────────────────── -->
+  <div class="s-panel" id="tab-security">
+    <div class="s-card">
+      <div class="s-card-head"><i class="fa-solid fa-key"></i> Change Password</div>
+      <div class="s-form-grid">
+        <div class="s-field s-full">
+          <label>Current Password</label>
+          <div class="pwd-wrap">
+            <input type="password" id="currentPwd" placeholder="Enter current password" />
+            <i class="fa-solid fa-eye pwd-eye" onclick="togglePwd('currentPwd',this)"></i>
+          </div>
+        </div>
+        <div class="s-field">
+          <label>New Password</label>
+          <div class="pwd-wrap">
+            <input type="password" id="newPwd" placeholder="Min 6 chars, 1 upper, 1 number" />
+            <i class="fa-solid fa-eye pwd-eye" onclick="togglePwd('newPwd',this)"></i>
+          </div>
+        </div>
+        <div class="s-field">
+          <label>Confirm New Password</label>
+          <div class="pwd-wrap">
+            <input type="password" id="confirmPwd" placeholder="Repeat new password" />
+            <i class="fa-solid fa-eye pwd-eye" onclick="togglePwd('confirmPwd',this)"></i>
+          </div>
+        </div>
+      </div>
+      <div class="pwd-strength-bar">
+        <div id="pwdStrengthFill" class="pwd-strength-fill"></div>
+      </div>
+      <p id="pwdStrengthLabel" class="pwd-strength-text"></p>
+      <div class="s-actions">
+        <button class="s-btn-primary" onclick="changePassword()">
+          <i class="fa-solid fa-lock"></i> Update Password
+        </button>
+      </div>
+    </div>
+
+    <div class="s-card" style="margin-top:18px;">
+      <div class="s-card-head"><i class="fa-solid fa-shield-halved"></i> Account Security</div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Two-Factor Authentication</span>
+          <span class="setting-desc">Require OTP on every login</span>
+        </div>
+        <label class="switch"><input type="checkbox" id="toggle2fa"><span class="slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Login Alerts via Email</span>
+          <span class="setting-desc">Get notified on new sign-ins</span>
+        </div>
+        <label class="switch"><input type="checkbox" checked id="toggleLoginAlert"><span class="slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Session Timeout</span>
+          <span class="setting-desc">Auto-logout after inactivity</span>
+        </div>
+        <select class="s-select" id="sessionTimeout">
+          <option value="30">30 minutes</option>
+          <option value="60" selected>1 hour</option>
+          <option value="180">3 hours</option>
+          <option value="0">Never</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="s-card danger-card" style="margin-top:18px;">
+      <div class="s-card-head danger-head"><i class="fa-solid fa-triangle-exclamation"></i> Danger Zone</div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Delete All My Data</span>
+          <span class="setting-desc">Permanently erase all parsed resumes and analytics</span>
+        </div>
+        <button class="s-btn-danger" onclick="confirmDeleteData()">Erase Data</button>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Delete Account</span>
+          <span class="setting-desc">This action is irreversible</span>
+        </div>
+        <button class="s-btn-danger" onclick="confirmDeleteAccount()">Delete Account</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── NOTIFICATIONS ─────────────────────────────────────── -->
+  <div class="s-panel" id="tab-notifications">
+    <div class="s-card">
+      <div class="s-card-head"><i class="fa-solid fa-bell"></i> Email Notifications</div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Resume Analyzed</span>
+          <span class="setting-desc">Email when your resume analysis is complete</span>
+        </div>
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Weekly Summary Report</span>
+          <span class="setting-desc">Get a weekly digest of your activity</span>
+        </div>
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Job Match Alerts</span>
+          <span class="setting-desc">Notify when new job matches are found</span>
+        </div>
+        <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Promotional Emails</span>
+          <span class="setting-desc">News, tips and feature announcements</span>
+        </div>
+        <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+      </div>
+    </div>
+
+    <div class="s-card" style="margin-top:18px;">
+      <div class="s-card-head"><i class="fa-solid fa-desktop"></i> In-App Notifications</div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Upload Complete Alert</span>
+          <span class="setting-desc">Show toast when resume is processed</span>
+        </div>
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Score Drop Warning</span>
+          <span class="setting-desc">Alert when match score drops below threshold</span>
+        </div>
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Score Alert Threshold</span>
+          <span class="setting-desc">Notify when score falls below this value</span>
+        </div>
+        <select class="s-select">
+          <option>50%</option>
+          <option selected>60%</option>
+          <option>70%</option>
+          <option>80%</option>
+        </select>
+      </div>
+      <div class="s-actions">
+        <button class="s-btn-primary" onclick="saveSection('notifications')">
+          <i class="fa-solid fa-floppy-disk"></i> Save Preferences
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── APPEARANCE ────────────────────────────────────────── -->
+  <div class="s-panel" id="tab-appearance">
+    <div class="s-card">
+      <div class="s-card-head"><i class="fa-solid fa-palette"></i> Theme</div>
+      <div class="theme-cards">
+        <div class="theme-card active" id="themeLight" onclick="setThemePref('light')">
+          <div class="theme-preview light-preview"></div>
+          <span>Light</span>
+          <i class="fa-solid fa-circle-check theme-tick"></i>
+        </div>
+        <div class="theme-card" id="themeDark" onclick="setThemePref('dark')">
+          <div class="theme-preview dark-preview"></div>
+          <span>Dark</span>
+          <i class="fa-solid fa-circle-check theme-tick"></i>
+        </div>
+        <div class="theme-card" id="themeAuto" onclick="setThemePref('auto')">
+          <div class="theme-preview auto-preview"></div>
+          <span>System</span>
+          <i class="fa-solid fa-circle-check theme-tick"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="s-card" style="margin-top:18px;">
+      <div class="s-card-head"><i class="fa-solid fa-text-height"></i> Display</div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Compact Sidebar</span>
+          <span class="setting-desc">Show icons only in sidebar</span>
+        </div>
+        <label class="switch"><input type="checkbox" id="compactSidebar"><span class="slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Animations</span>
+          <span class="setting-desc">Enable smooth UI transitions</span>
+        </div>
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Font Size</span>
+          <span class="setting-desc">Adjust base font size</span>
+        </div>
+        <select class="s-select" id="fontSize" onchange="applyFontSize(this.value)">
+          <option value="14">Small (14px)</option>
+          <option value="15" selected>Medium (15px)</option>
+          <option value="16">Large (16px)</option>
+          <option value="18">Extra Large (18px)</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Date Format</span>
+          <span class="setting-desc">How dates appear in the app</span>
+        </div>
+        <select class="s-select">
+          <option>DD/MM/YYYY</option>
+          <option>MM/DD/YYYY</option>
+          <option>YYYY-MM-DD</option>
+        </select>
+      </div>
+      <div class="s-actions">
+        <button class="s-btn-primary" onclick="saveSection('appearance')">
+          <i class="fa-solid fa-floppy-disk"></i> Save Appearance
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── PRIVACY ───────────────────────────────────────────── -->
+  <div class="s-panel" id="tab-privacy">
+    <div class="s-card">
+      <div class="s-card-head"><i class="fa-solid fa-user-shield"></i> Profile Visibility</div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Public Profile</span>
+          <span class="setting-desc">Allow others to view your public profile</span>
+        </div>
+        <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Show Email on Profile</span>
+          <span class="setting-desc">Display email to other users</span>
+        </div>
+        <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Share Analytics Data</span>
+          <span class="setting-desc">Help improve CV Mind with anonymous usage stats</span>
+        </div>
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+      </div>
+    </div>
+
+    <div class="s-card" style="margin-top:18px;">
+      <div class="s-card-head"><i class="fa-solid fa-database"></i> Data & Storage</div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Auto-Delete Old Resumes</span>
+          <span class="setting-desc">Remove uploaded files after set period</span>
+        </div>
+        <select class="s-select">
+          <option>Never</option>
+          <option>After 30 days</option>
+          <option selected>After 90 days</option>
+          <option>After 1 year</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Download My Data</span>
+          <span class="setting-desc">Export all your resume analysis history</span>
+        </div>
+        <button class="s-btn-outline" onclick="showToast('Export started — check your email.')">
+          <i class="fa-solid fa-download"></i> Export
+        </button>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Cookie Preferences</span>
+          <span class="setting-desc">Manage analytics and tracking cookies</span>
+        </div>
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+      </div>
+      <div class="s-actions">
+        <button class="s-btn-primary" onclick="saveSection('privacy')">
+          <i class="fa-solid fa-floppy-disk"></i> Save Privacy Settings
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── RESUME AI ──────────────────────────────────────────── -->
+  <div class="s-panel" id="tab-resume">
+    <div class="s-card">
+      <div class="s-card-head"><i class="fa-solid fa-robot"></i> AI Analysis Preferences</div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Auto Resume Parsing</span>
+          <span class="setting-desc">Automatically parse on upload without confirmation</span>
+        </div>
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">LinkedIn Analysis</span>
+          <span class="setting-desc">Enable LinkedIn profile text analysis</span>
+        </div>
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Show Confidence Score</span>
+          <span class="setting-desc">Display AI confidence percentage on results</span>
+        </div>
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Default Analysis Mode</span>
+          <span class="setting-desc">Choose default mode when uploading</span>
+        </div>
+        <select class="s-select">
+          <option selected>Resume Upload</option>
+          <option>LinkedIn Text</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="s-card" style="margin-top:18px;">
+      <div class="s-card-head"><i class="fa-solid fa-sliders"></i> Scoring & Matching</div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Minimum Match Score</span>
+          <span class="setting-desc">Filter results below this threshold</span>
+        </div>
+        <select class="s-select">
+          <option>No filter</option>
+          <option>50%</option>
+          <option selected>60%</option>
+          <option>70%</option>
+          <option>80%</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Preferred Job Domain</span>
+          <span class="setting-desc">Pre-select a domain for matching</span>
+        </div>
+        <select class="s-select">
+          <option>Any</option>
+          <option>Software Engineer</option>
+          <option>Data Science</option>
+          <option>Marketing</option>
+          <option>Finance</option>
+          <option>Healthcare</option>
+          <option>HR</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Max Resumes Stored</span>
+          <span class="setting-desc">Keep only the latest N analyses</span>
+        </div>
+        <select class="s-select">
+          <option>25</option>
+          <option selected>50</option>
+          <option>100</option>
+          <option>Unlimited</option>
+        </select>
+      </div>
+      <div class="s-actions">
+        <button class="s-btn-primary" onclick="saveSection('resume ai')">
+          <i class="fa-solid fa-floppy-disk"></i> Save AI Settings
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end s-page -->
+
+<script>
+  /* ── Tab switching ── */
+  document.querySelectorAll('.s-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.s-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.s-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  /* ── Toast ── */
+  function showToast(msg) {
+    const t = document.getElementById('settingsToast');
+    document.getElementById('toastMsg').textContent = msg || 'Settings saved!';
+    t.style.display = 'flex';
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(() => t.style.display = 'none', 3000);
+  }
+
+  function saveSection(section) {
+    showToast(section.charAt(0).toUpperCase() + section.slice(1) + ' settings saved!');
+  }
+
+  /* ── Password visibility ── */
+  function togglePwd(id, icon) {
+    const inp = document.getElementById(id);
+    if (inp.type === 'password') {
+      inp.type = 'text';
+      icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+      inp.type = 'password';
+      icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
+  }
+
+  /* ── Password strength ── */
+  document.getElementById('newPwd').addEventListener('input', function() {
+    const val = this.value;
+    const fill = document.getElementById('pwdStrengthFill');
+    const label = document.getElementById('pwdStrengthLabel');
+    let score = 0;
+    if (val.length >= 6) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[@.&\-_]/.test(val)) score++;
+    const levels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+    const colors = ['', '#ef4444', '#f59e0b', '#3b82f6', '#22c55e'];
+    fill.style.width = (score * 25) + '%';
+    fill.style.background = colors[score] || '';
+    label.textContent = val.length ? levels[score] || 'Weak' : '';
+    label.style.color = colors[score];
+  });
+
+  /* ── Change password (calls /change-password) ── */
+  function changePassword() {
+    const cur = document.getElementById('currentPwd').value;
+    const nw  = document.getElementById('newPwd').value;
+    const cfm = document.getElementById('confirmPwd').value;
+    if (!cur || !nw || !cfm) { showToast('Please fill all password fields.'); return; }
+    if (nw !== cfm) { showToast('New passwords do not match!'); return; }
+    fetch('/change-password', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({current: cur, new_password: nw})
+    }).then(r => r.json()).then(d => {
+      showToast(d.message || 'Password updated!');
+    }).catch(() => showToast('Error updating password.'));
+  }
+
+  /* ── Danger zone ── */
+  function confirmDeleteData() {
+    if (confirm('This will permanently delete all your resume data. Continue?')) {
+      showToast('All data erased.');
+    }
+  }
+  function confirmDeleteAccount() {
+    if (confirm('Delete your account permanently? This cannot be undone.')) {
+      window.location.href = '/logout';
+    }
+  }
+
+  /* ── Theme preference ── */
+  function setThemePref(theme) {
+    document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('active'));
+    const map = {light:'themeLight', dark:'themeDark', auto:'themeAuto'};
+    document.getElementById(map[theme]).classList.add('active');
+    if (theme !== 'auto') {
+      document.body.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+      const toggle = document.getElementById('themeToggle');
+      if (toggle) toggle.checked = theme === 'dark';
+    }
+    showToast('Theme updated!');
+  }
+
+  /* Sync theme cards with current theme */
+  const cur = localStorage.getItem('theme') || 'light';
+  const mapSync = {light:'themeLight', dark:'themeDark'};
+  if (mapSync[cur]) {
+    document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('active'));
+    document.getElementById(mapSync[cur]).classList.add('active');
+  }
+
+  /* ── Font size ── */
+  function applyFontSize(size) {
+    document.documentElement.style.fontSize = size + 'px';
+    localStorage.setItem('fontSize', size);
+    showToast('Font size updated!');
+  }
+  const savedFS = localStorage.getItem('fontSize');
+  if (savedFS) {
+    document.documentElement.style.fontSize = savedFS + 'px';
+    const sel = document.getElementById('fontSize');
+    if (sel) sel.value = savedFS;
+  }
+</script>
 {% endblock %}
