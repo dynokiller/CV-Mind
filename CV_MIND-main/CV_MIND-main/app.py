@@ -12,6 +12,8 @@ from authlib.integrations.flask_client import OAuth
 import os, time, requests, pytz, random, re, uuid
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
+from openai import OpenAI
+
 from dotenv import load_dotenv
 import threading
 import hashlib
@@ -1137,6 +1139,7 @@ def store_analysis_result():
                 "status": "Success",
                 "match_score": final_score,
                 "file_name": payload.get("file_name", "Client Upload"),
+                "resume_text": payload.get("full_resume_text", "")
             },
         )
 
@@ -1541,14 +1544,77 @@ def matching():
         return redirect(url_for("signin"))
     
     user_id = session["user_id"]
-    resumes = safe_find(activity_collection, {"user_id": user_id, "status": "Success"})
     
-    match_result = None
     if request.method == "POST":
-        # Simplified implementation: just show recommendations for now
-        pass
-                    
-    return render_template("matching.html", page="matching", resumes=resumes, result=match_result)
+        data = request.get_json()
+        resume_id = data.get("resume_id")
+        job_desc = data.get("job_description")
+        
+        if not resume_id or not job_desc:
+            return jsonify({"success": False, "error": "Missing resume or job description"}), 400
+            
+        activity = safe_find_one(activity_collection, {"_id": resume_id, "user_id": user_id})
+        if not activity:
+            return jsonify({"success": False, "error": "Resume not found"}), 404
+            
+        resume_text = activity.get("resume_text", "")
+        if not resume_text:
+            return jsonify({"success": False, "error": "Resume text is missing. Please re-analyze your resume first."}), 400
+
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            return jsonify({
+                "success": True,
+                "score": 75,
+                "summary": "This is a mock analysis because OPENAI_API_KEY is not set.",
+                "matches": ["Skill A", "Skill B"],
+                "missing": ["Skill C"],
+                "feedback": "Please add your OpenAI API key to enable live analysis."
+            })
+
+        try:
+            client = OpenAI(api_key=api_key)
+            prompt = f"""
+            Compare the following Resume against the Job Description.
+            
+            Resume:
+            {resume_text}
+            
+            Job Description:
+            {job_desc}
+            
+            Provide a JSON response with:
+            - score: (0-100)
+            - summary: (brief overview of fit)
+            - matches: [list of matched skills/experience]
+            - missing: [list of gaps]
+            - feedback: (detailed advice to improve the resume for this job)
+            """
+            
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"}
+            )
+            
+            import json
+            analysis = json.loads(response.choices[0].message.content)
+            return jsonify({
+                "success": True,
+                "score": analysis.get("score", 0),
+                "summary": analysis.get("summary", ""),
+                "matches": analysis.get("matches", []),
+                "missing": analysis.get("missing", []),
+                "feedback": analysis.get("feedback", "")
+            })
+            
+        except Exception as e:
+            print(f"[ERROR] OpenAI Match failed: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
+            
+    # GET request
+    resumes = safe_find(activity_collection, {"user_id": user_id, "status": "Success"})
+    return render_template("matching.html", page="matching", resumes=resumes)
 
 
 @app.route("/settings")

@@ -13,6 +13,8 @@ from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from bson import ObjectId
 from text_extractor import extract_candidate_name
+from openai import OpenAI
+
 
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
@@ -966,7 +968,8 @@ def upload_resume():
             "missing_skills": result.get("missing_keywords", []),
             "strengths": result.get("matched_keywords", []),
             "suggestions": result.get("suggestions", []),
-            "latency_ms": round(process_time * 1000)
+            "latency_ms": round(process_time * 1000),
+            "resume_text": extracted_text
         })
 
         stats_collection.update_one(
@@ -1154,40 +1157,79 @@ def matching():
         return redirect(url_for("signin"))
     
     user_id = session["user_id"]
-    # Get all successful parses for selection
-    resumes = list(activity_collection.find({"user_id": user_id, "status": "Success"}))
     
-    match_result = None
     if request.method == "POST":
-        resume_id = request.form.get("resume_id")
-        job_desc = request.form.get("job_description")
+        data = request.get_json()
+        resume_id = data.get("resume_id")
+        job_desc = data.get("job_description")
         
-        if resume_id and job_desc:
-            # Find the resume text in the resumes collection (not activities)
-            # Actually, activities usually has the extracted info.
-            # But the full text might be in 'resumes' collection or we can just use the activity summary.
-            activity = activity_collection.find_one({"_id": ObjectId(resume_id)})
+        if not resume_id or not job_desc:
+            return jsonify({"success": False, "error": "Missing resume or job description"}), 400
             
-            if activity:
-                # Call backend for matching
-                parser_url = os.getenv("PARSERAI_URL") or "https://dyno0126-cv-mind-analyzer.hf.space/upload-analyze"
-                # Since we don't have the original file easily here, 
-                # we can use the /analyze-text endpoint if the backend supports it.
-                # Let's check api/main.py for /analyze-text
-                
-                try:
-                    # Fallback to the text-based matching if available
-                    analyze_url = parser_url.replace("/upload-analyze", "/analyze")
-                    payload = {
-                        "text": activity.get("resume_text", ""), # We need to make sure we store resume_text in activity
-                        "job_description": job_desc
-                    }
-                    # ... wait, let's keep it simple for now and just render the page
-                    pass
-                except:
-                    pass
-                    
-    return render_template("matching.html", page="matching", resumes=resumes, result=match_result)
+        activity = activity_collection.find_one({"_id": ObjectId(resume_id), "user_id": user_id})
+        if not activity:
+            return jsonify({"success": False, "error": "Resume not found"}), 404
+            
+        resume_text = activity.get("resume_text", "")
+        if not resume_text:
+            return jsonify({"success": False, "error": "Resume text is missing. Please re-upload your resume."}), 400
+
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            # Fallback mock if no API key
+            return jsonify({
+                "success": True,
+                "score": 75,
+                "summary": "This is a mock analysis because OPENAI_API_KEY is not set in the .env file.",
+                "matches": ["Skill A", "Skill B"],
+                "missing": ["Skill C"],
+                "feedback": "Please add your OpenAI API key to enable live analysis."
+            })
+
+        try:
+            client = OpenAI(api_key=api_key)
+            prompt = f"""
+            Compare the following Resume against the Job Description.
+            
+            Resume:
+            {resume_text}
+            
+            Job Description:
+            {job_desc}
+            
+            Provide a JSON response with:
+            - score: (0-100)
+            - summary: (brief overview of fit)
+            - matches: [list of matched skills/experience]
+            - missing: [list of gaps]
+            - feedback: (detailed advice to improve the resume for this job)
+            """
+            
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"}
+            )
+            
+            import json
+            analysis = json.loads(response.choices[0].message.content)
+            return jsonify({
+                "success": True,
+                "score": analysis.get("score", 0),
+                "summary": analysis.get("summary", ""),
+                "matches": analysis.get("matches", []),
+                "missing": analysis.get("missing", []),
+                "feedback": analysis.get("feedback", "")
+            })
+            
+        except Exception as e:
+            print(f"[ERROR] OpenAI Match failed: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
+            
+    # GET request
+    resumes = list(activity_collection.find({"user_id": user_id, "status": "Success"}))
+    for r in resumes: r["_id"] = str(r["_id"])
+    return render_template("matching.html", page="matching", resumes=resumes)
 
 
 @app.route("/settings")
