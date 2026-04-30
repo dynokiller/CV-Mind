@@ -12,7 +12,7 @@ from authlib.integrations.flask_client import OAuth
 import os, time, requests, pytz, random, re, uuid
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
-from openai import OpenAI
+import google.generativeai as genai
 
 from dotenv import load_dotenv
 import threading
@@ -1561,19 +1561,21 @@ def matching():
         if not resume_text:
             return jsonify({"success": False, "error": "Resume text is missing. Please re-analyze your resume first."}), 400
 
-        api_key = os.getenv("OPENAI_API_KEY")
+        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         if not api_key:
             return jsonify({
                 "success": True,
                 "score": 75,
-                "summary": "This is a mock analysis because OPENAI_API_KEY is not set.",
+                "summary": "This is a mock analysis because GOOGLE_API_KEY is not set.",
                 "matches": ["Skill A", "Skill B"],
                 "missing": ["Skill C"],
-                "feedback": "Please add your OpenAI API key to enable live analysis."
+                "feedback": "Please add your Google API key to enable live analysis."
             })
 
         try:
-            client = OpenAI(api_key=api_key)
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            
             prompt = f"""
             Compare the following Resume against the Job Description.
             
@@ -1583,33 +1585,39 @@ def matching():
             Job Description:
             {job_desc}
             
-            Provide a JSON response with:
-            - score: (0-100)
+            Provide a JSON response with the following keys:
+            - score: (a number from 0-100)
             - summary: (brief overview of fit)
             - matches: [list of matched skills/experience]
             - missing: [list of gaps]
             - feedback: (detailed advice to improve the resume for this job)
+            
+            Output ONLY valid JSON.
             """
             
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": prompt}],
-                response_format={"type": "json_object"}
-            )
+            response = model.generate_content(prompt)
             
+            # Handle potential Markdown blocks in response
+            response_text = response.text
+            if "```json" in response_text:
+                response_text = response_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in response_text:
+                response_text = response_text.split("```")[1].split("```")[0].strip()
+
             import json
-            analysis = json.loads(response.choices[0].message.content)
+            result = json.loads(response_text)
+            
             return jsonify({
                 "success": True,
-                "score": analysis.get("score", 0),
-                "summary": analysis.get("summary", ""),
-                "matches": analysis.get("matches", []),
-                "missing": analysis.get("missing", []),
-                "feedback": analysis.get("feedback", "")
+                "score": result.get("score", 0),
+                "summary": result.get("summary", ""),
+                "matches": result.get("matches", []),
+                "missing": result.get("missing", []),
+                "feedback": result.get("feedback", "")
             })
             
         except Exception as e:
-            print(f"[ERROR] OpenAI Match failed: {e}")
+            print(f"[ERROR] Gemini Match failed: {e}")
             return jsonify({"success": False, "error": str(e)}), 500
             
     # GET request

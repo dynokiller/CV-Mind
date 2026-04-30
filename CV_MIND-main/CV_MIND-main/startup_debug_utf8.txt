@@ -1,0 +1,56 @@
+﻿MongoDB connected successfully.
+python : Traceback 
+(most recent call 
+last):
+At line:1 char:1
++ python app.py > 
+startup_debug.txt 
+2>&1; type 
+startup_debug.txt
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (Traceback (mo   
+ st recent call las    
+t)::String) [], Re    
+moteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+  File "C:\Users\Admin\
+Desktop\Resume\CV_MIND-
+main\CV_MIND-main\app.p
+y", line 50, in 
+<module>
+    serializer = 
+URLSafeTimedSerializer(
+                 
+^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Admin\
+AppData\Local\Programs\
+Python\Python312\Lib\si
+te-packages\itsdangerou
+s\serializer.py", line 
+210, in __init__
+    self.secret_keys: 
+list[bytes] = _make_key
+s_list(secret_key)
+                       
+             ^^^^^^^^^^
+^^^^^^^^^^^^^^^^^
+  File "C:\Users\Admin\
+AppData\Local\Programs\
+Python\Python312\Lib\si
+te-packages\itsdangerou
+s\signer.py", line 73, 
+in _make_keys_list
+    return 
+[want_bytes(s) for s 
+in secret_key]  # 
+pyright: ignore
+           ^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: 'NoneType' 
+object is not iterable
