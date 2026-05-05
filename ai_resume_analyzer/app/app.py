@@ -971,7 +971,7 @@ def upload_resume():
                     extracted_text = extract_text(filepath, file.filename)
                     
                     if extracted_text:
-                        google_key = os.getenv("GOOGLE_API_KEY")
+                        google_key = os.getenv("CV_MIND_GEMINI_KEY")
                         prompt = f"""
                         Analyze the following resume text and provide:
                         1. Predicted job domain (e.g., Software Engineering, Data Science, etc.)
@@ -1291,7 +1291,7 @@ def matching():
             resume_text = activity.get("resume_text", "")
             print(f"[DEBUG] STEP 3: Resume found (Text Length: {len(resume_text)})")
 
-        google_key = os.getenv("GOOGLE_API_KEY")
+        google_key = os.getenv("CV_MIND_GEMINI_KEY")
         openai_key = os.getenv("OPENAI_API_KEY")
 
         if google_key:
@@ -1388,7 +1388,7 @@ def matching():
                 "summary": "This is a mock analysis because no API keys (OpenAI or Google) are set in the .env file.",
                 "matches": ["Skill A", "Skill B"],
                 "missing": ["Skill C"],
-                "feedback": "Please add an API key (OPENAI_API_KEY or GOOGLE_API_KEY) to enable live analysis."
+                "feedback": "Please add an API key (OPENAI_API_KEY or CV_MIND_GEMINI_KEY) to enable live analysis."
             })
 
         try:
