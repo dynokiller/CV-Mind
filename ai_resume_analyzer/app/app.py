@@ -993,31 +993,36 @@ def upload_resume():
                         }}
                         """
                         
-                        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={google_key}"
-                        payload = {
-                            "contents": [{"parts": [{"text": prompt}]}],
-                            "generationConfig": {"response_mime_type": "application/json"}
-                        }
+                        # Use SDK for fallback analysis
+                        genai.configure(api_key=google_key)
+                        model = genai.GenerativeModel('gemini-1.5-flash')
                         
-                        res = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
+                        res = model.generate_content(
+                            prompt,
+                            generation_config={"response_mime_type": "application/json"}
+                        )
                         
-                        # Fallback to v1beta if v1 fails
-                        if res.status_code != 200:
-                            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={google_key}"
-                            res = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
-
-                        if res.status_code == 200:
-                            gemini_result = res.json()
-                            raw_json = gemini_result['candidates'][0]['content']['parts'][0]['text']
-                            analysis = json.loads(raw_json)
-                            
-                            result = analysis
-                            result["full_resume_text"] = extracted_text
-                            result["matched_keywords"] = analysis.get("skills_found", [])
-                            result["missing_keywords"] = analysis.get("missing_skills", [])
-                            match_score = analysis.get("final_score", 0)
-                            status = "Success"
-                            print("[INFO] Gemini fallback successful.")
+                        try:
+                            if res and res.text:
+                                raw_text = res.text
+                                # Clean markdown
+                                if "```json" in raw_text:
+                                    raw_text = raw_text.split("```json")[1].split("```")[0].strip()
+                                elif "```" in raw_text:
+                                    raw_text = raw_text.split("```")[1].split("```")[0].strip()
+                                    
+                                analysis = json.loads(raw_text)
+                                result = analysis
+                                result["full_resume_text"] = extracted_text
+                                result["matched_keywords"] = analysis.get("skills_found", [])
+                                result["missing_keywords"] = analysis.get("missing_skills", [])
+                                match_score = analysis.get("final_score", 0)
+                                status = "Success"
+                                print("[INFO] Gemini SDK fallback successful.")
+                            else:
+                                print("[ERROR] Gemini SDK returned empty response in fallback.")
+                        except ValueError:
+                            print(f"[ERROR] Gemini fallback blocked: {res.prompt_feedback}")
                 except Exception as e:
                     print(f"[ERROR] Gemini fallback failed: {e}")
 
@@ -1287,30 +1292,25 @@ def matching():
                 Ensure the response is valid JSON.
                 """
 
-                # 1. Primary Attempt: Gemini 1.5 Flash (Fast and reliable)
-                url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={google_key}"
-                payload = {
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {"response_mime_type": "application/json"}
-                }
+                # Use the SDK for better reliability and automatic retry handling
+                genai.configure(api_key=google_key)
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 
-                response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
+                response = model.generate_content(
+                    prompt,
+                    generation_config={"response_mime_type": "application/json"}
+                )
                 
-                # 2. Fallback: If v1 fails, try v1beta as some keys/regions might prefer it
-                if response.status_code != 200:
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={google_key}"
-                    response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
-
-                if response.status_code == 200:
-                    result = response.json()
-                    if 'candidates' in result and len(result['candidates']) > 0:
-                        raw_text = result['candidates'][0]['content']['parts'][0]['text']
-                        # Basic cleaning in case the model didn't follow JSON mode (especially for fallback)
+                # Use a more resilient way to get text, as safety filters can block it
+                try:
+                    if response and response.text:
+                        raw_text = response.text
+                        # Clean markdown if present
                         if "```json" in raw_text:
                             raw_text = raw_text.split("```json")[1].split("```")[0].strip()
                         elif "```" in raw_text:
                             raw_text = raw_text.split("```")[1].split("```")[0].strip()
-                        
+                            
                         analysis = json.loads(raw_text)
                         return jsonify({
                             "success": True,
@@ -1321,9 +1321,11 @@ def matching():
                             "feedback": analysis.get("feedback", "")
                         })
                     else:
-                        raise Exception("No analysis candidates returned from Gemini.")
-                else:
-                    raise Exception(f"Gemini API error (Status {response.status_code}): {response.text}")
+                        raise Exception("Empty response from Gemini SDK.")
+                except ValueError as ve:
+                    # This happens if the response was blocked by safety filters
+                    print(f"[DEBUG] Gemini blocked: {response.prompt_feedback}")
+                    raise Exception("Gemini blocked the request due to safety filters. Try a different resume or description.")
 
             except Exception as e:
                 print(f"[ERROR] Gemini Match failed: {e}")
