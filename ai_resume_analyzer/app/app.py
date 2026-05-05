@@ -24,10 +24,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 load_dotenv()
-google_key = os.getenv("GOOGLE_API_KEY")
-if google_key:
-    genai.configure(api_key=google_key)
-
+ 
 app = Flask(__name__)
 # Generate a highly secure random key if none is provided in the environment.
 app.secret_key = os.getenv("FLASK_SECRET_KEY") or os.getenv("SECRET_KEY") or os.urandom(32).hex()
@@ -996,22 +993,32 @@ def upload_resume():
                         }}
                         """
                         
-                        # Use SDK for fallback analysis
-                        model = genai.GenerativeModel('gemini-1.5-flash')
-                        
-                        res = model.generate_content(
-                            prompt,
-                            generation_config={"response_mime_type": "application/json"}
-                        )
+                        # Use direct REST API for fallback parsing
+                        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={google_key}"
+                        payload = {
+                            "contents": [{
+                                "parts": [{"text": f"{prompt}\n\nResume Text:\n{extracted_text[:10000]}\n\nIMPORTANT: Return ONLY a valid JSON object."}]
+                            }],
+                            "generationConfig": {"temperature": 0.1}
+                        }
                         
                         try:
-                            if res and res.text:
-                                raw_text = res.text
+                            res = requests.post(url, json=payload, timeout=15)
+                            if res.status_code == 200:
+                                result_json = res.json()
+                                raw_text = result_json['candidates'][0]['content']['parts'][0]['text'].strip()
+                                
                                 # Clean markdown
                                 if "```json" in raw_text:
                                     raw_text = raw_text.split("```json")[1].split("```")[0].strip()
                                 elif "```" in raw_text:
                                     raw_text = raw_text.split("```")[1].split("```")[0].strip()
+                                
+                                # Extract JSON object
+                                start_idx = raw_text.find("{")
+                                end_idx = raw_text.rfind("}")
+                                if start_idx != -1 and end_idx != -1:
+                                    raw_text = raw_text[start_idx:end_idx+1]
                                     
                                 analysis = json.loads(raw_text)
                                 result = analysis
@@ -1020,11 +1027,11 @@ def upload_resume():
                                 result["missing_keywords"] = analysis.get("missing_skills", [])
                                 match_score = analysis.get("final_score", 0)
                                 status = "Success"
-                                print("[INFO] Gemini SDK fallback successful.")
+                                print("[INFO] Gemini REST fallback successful.")
                             else:
-                                print("[ERROR] Gemini SDK returned empty response in fallback.")
-                        except ValueError:
-                            print(f"[ERROR] Gemini fallback blocked: {res.prompt_feedback}")
+                                print(f"[ERROR] Gemini REST fallback failed ({res.status_code})")
+                        except Exception as e:
+                            print(f"[ERROR] Gemini REST fallback error: {e}")
                 except Exception as e:
                     print(f"[ERROR] Gemini fallback failed: {e}")
 
@@ -1295,41 +1302,63 @@ def matching():
                 Ensure the response is valid JSON.
                 """
 
-                # Use the SDK model instance
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                # Use direct REST API for maximum reliability on serverless (Vercel)
+                url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={google_key}"
                 
-                print("[DEBUG] Sending request to Gemini...")
-                response = model.generate_content(
-                    prompt,
-                    generation_config={"response_mime_type": "application/json"}
-                )
-                print("[DEBUG] Received response from Gemini.")
+                # Truncate text for safety
+                safe_resume_text = resume_text[:10000]
                 
-                # Use a more resilient way to get text, as safety filters can block it
+                payload = {
+                    "contents": [{
+                        "parts": [{"text": f"{prompt}\n\nResume Text:\n{safe_resume_text}\n\nIMPORTANT: Return ONLY a valid JSON object."}]
+                    }],
+                    "generationConfig": {
+                        "temperature": 0.2,
+                        "topP": 0.8,
+                        "topK": 40
+                    }
+                }
+                
+                print("[DEBUG] Sending direct REST request to Gemini...")
                 try:
-                    if response and response.text:
-                        raw_text = response.text
-                        # Clean markdown if present
-                        if "```json" in raw_text:
-                            raw_text = raw_text.split("```json")[1].split("```")[0].strip()
-                        elif "```" in raw_text:
-                            raw_text = raw_text.split("```")[1].split("```")[0].strip()
+                    response = requests.post(url, json=payload, timeout=15)
+                    print(f"[DEBUG] Gemini responded with status {response.status_code}")
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        if 'candidates' in result and len(result['candidates']) > 0:
+                            raw_text = result['candidates'][0]['content']['parts'][0]['text'].strip()
                             
-                        analysis = json.loads(raw_text)
-                        return jsonify({
-                            "success": True,
-                            "score": analysis.get("score", 0),
-                            "summary": analysis.get("summary", ""),
-                            "matches": analysis.get("matches", []),
-                            "missing": analysis.get("missing", []),
-                            "feedback": analysis.get("feedback", "")
-                        })
+                            # Clean markdown
+                            if "```json" in raw_text:
+                                raw_text = raw_text.split("```json")[1].split("```")[0].strip()
+                            elif "```" in raw_text:
+                                raw_text = raw_text.split("```")[1].split("```")[0].strip()
+                            
+                            # Extract JSON object
+                            start_idx = raw_text.find("{")
+                            end_idx = raw_text.rfind("}")
+                            if start_idx != -1 and end_idx != -1:
+                                raw_text = raw_text[start_idx:end_idx+1]
+                                
+                            analysis = json.loads(raw_text)
+                            return jsonify({
+                                "success": True,
+                                "score": analysis.get("score", 0),
+                                "summary": analysis.get("summary", ""),
+                                "matches": analysis.get("matches", []),
+                                "missing": analysis.get("missing", []),
+                                "feedback": analysis.get("feedback", "")
+                            })
+                        else:
+                            raise Exception("No analysis candidates in Gemini response.")
                     else:
-                        raise Exception("Empty response from Gemini SDK.")
-                except ValueError as ve:
-                    # This happens if the response was blocked by safety filters
-                    print(f"[DEBUG] Gemini blocked: {response.prompt_feedback}")
-                    raise Exception("Gemini blocked the request due to safety filters. Try a different resume or description.")
+                        raise Exception(f"Gemini API error ({response.status_code}): {response.text[:200]}")
+                        
+                except requests.exceptions.Timeout:
+                    raise Exception("The AI analysis took too long. Please try again with a shorter job description.")
+                except Exception as inner_e:
+                    raise inner_e
 
             except Exception as e:
                 print(f"[ERROR] Gemini Match failed: {e}")
