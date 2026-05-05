@@ -13,7 +13,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from bson import ObjectId, Binary
-from text_extractor import extract_candidate_name
+from text_extractor import extract_candidate_name, extract_text
 from openai import OpenAI
 import google.generativeai as genai
 
@@ -964,6 +964,57 @@ def upload_resume():
                 
             process_time = round(time.time() - start_time, 2)
             
+            # --- FALLBACK: If HF Space fails, use local text extraction + Gemini analysis ---
+            if status == "Error" and os.getenv("GOOGLE_API_KEY"):
+                try:
+                    print("[INFO] HF Parser failed. Attempting local parsing + Gemini analysis fallback...")
+                    extracted_text = extract_text(filepath, file.filename)
+                    
+                    if extracted_text:
+                        google_key = os.getenv("GOOGLE_API_KEY")
+                        prompt = f"""
+                        Analyze the following resume text and provide:
+                        1. Predicted job domain (e.g., Software Engineering, Data Science, etc.)
+                        2. Confidence score (0.0 to 1.0)
+                        3. List of skills found
+                        4. Missing skills for a standard role in that domain
+                        5. Overall match score (0-100)
+                        
+                        Resume Text:
+                        {extracted_text}
+                        
+                        Return a JSON object with:
+                        {{
+                            "predicted_domain": "...",
+                            "confidence": 0.0,
+                            "skills_found": [...],
+                            "missing_skills": [...],
+                            "final_score": 0
+                        }}
+                        """
+                        
+                        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={google_key}"
+                        payload = {
+                            "contents": [{"parts": [{"text": prompt}]}],
+                            "generationConfig": {"response_mime_type": "application/json"}
+                        }
+                        
+                        res = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
+                        if res.status_code == 200:
+                            gemini_result = res.json()
+                            raw_json = gemini_result['candidates'][0]['content']['parts'][0]['text']
+                            analysis = json.loads(raw_json)
+                            
+                            result = analysis
+                            result["full_resume_text"] = extracted_text
+                            result["matched_keywords"] = analysis.get("skills_found", [])
+                            result["missing_keywords"] = analysis.get("missing_skills", [])
+                            match_score = analysis.get("final_score", 0)
+                            status = "Success"
+                            print("[INFO] Gemini fallback successful.")
+                except Exception as e:
+                    print(f"[ERROR] Gemini fallback failed: {e}")
+
         except Exception as e:
             process_time = round(time.time() - start_time, 2)
             status = "Error"
