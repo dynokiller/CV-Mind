@@ -1188,7 +1188,7 @@ def matching():
         if google_key:
             try:
                 genai.configure(api_key=google_key)
-                model = genai.GenerativeModel('gemini-1.5-flash-latest')
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 
                 prompt = f"""
                 Compare the following Resume against the Job Description.
