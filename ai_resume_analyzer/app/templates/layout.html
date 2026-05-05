@@ -344,6 +344,9 @@
             <pre id="resumeContent" class="resume-text-area"></pre>
           </div>
           <div class="modal-footer">
+            <button class="save-role-btn" onclick="viewOriginalResume()" style="width: auto; padding: 10px 20px; background: #6366f1; margin-right: 10px;">
+              <i class="fa-solid fa-file-pdf"></i> View Original
+            </button>
             <button class="save-role-btn" onclick="copyResumeText()" style="width: auto; padding: 10px 20px;">
               <i class="fa-solid fa-copy"></i> Copy Text
             </button>
@@ -539,7 +542,10 @@
       });
     </script>
     <script>
+      let activeActivityId = null;
+
       function openResumeModal(activityId) {
+        activeActivityId = activityId;
         const modal = document.getElementById('resumeModal');
         const content = document.getElementById('resumeContent');
         const title = document.getElementById('resumeModalTitle');
@@ -560,6 +566,12 @@
           .catch(err => {
             content.textContent = "Failed to fetch resume content.";
           });
+      }
+
+      function viewOriginalResume() {
+        if (activeActivityId) {
+          window.open(`/view-original-resume/${activeActivityId}`, '_blank');
+        }
       }
 
       function closeResumeModal() {

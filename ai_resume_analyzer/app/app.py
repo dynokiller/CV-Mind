@@ -12,7 +12,7 @@ import threading, hashlib, secrets
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
-from bson import ObjectId
+from bson import ObjectId, Binary
 from text_extractor import extract_candidate_name
 from openai import OpenAI
 import google.generativeai as genai
@@ -901,6 +901,10 @@ def upload_resume():
         filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         file.save(filepath)
         
+        # Read file content for database storage
+        with open(filepath, "rb") as f:
+            binary_content = Binary(f.read())
+        
         file_hash = generate_hash(filepath)
 
         file_integrity_collection.insert_one({
@@ -972,7 +976,8 @@ def upload_resume():
             "strengths": result.get("matched_keywords", []),
             "suggestions": result.get("suggestions", []),
             "latency_ms": round(process_time * 1000),
-            "resume_text": extracted_text
+            "resume_text": extracted_text,
+            "file_content": binary_content
         })
 
         stats_collection.update_one(
@@ -1429,6 +1434,47 @@ def delete_account():
     
     session.clear()
     return jsonify({"status": "ok", "message": "Account deleted."})
+
+
+@app.route("/view-original-resume/<activity_id>")
+def view_original_resume(activity_id):
+    if not is_logged_in():
+        return redirect(url_for("signin"))
+        
+    try:
+        activity = activity_collection.find_one({
+            "_id": ObjectId(activity_id),
+            "user_id": session["user_id"]
+        })
+        
+        if not activity or "file_content" not in activity:
+            return "Original resume file not found in database. This might be an older record.", 404
+            
+        file_content = activity["file_content"]
+        filename = activity.get("file_name", "resume.pdf")
+        
+        # Strip the UUID prefix for the display filename if possible
+        display_filename = filename
+        if "_" in filename:
+            display_filename = filename.split("_", 1)[1]
+        
+        content_type = "application/pdf"
+        if filename.lower().endswith(".doc"):
+            content_type = "application/msword"
+        elif filename.lower().endswith(".docx"):
+            content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            
+        response = make_response(file_content)
+        response.headers["Content-Type"] = content_type
+        
+        if content_type == "application/pdf":
+            response.headers["Content-Disposition"] = f"inline; filename={display_filename}"
+        else:
+            response.headers["Content-Disposition"] = f"attachment; filename={display_filename}"
+            
+        return response
+    except Exception as e:
+        return str(e), 400
 
 
 # ----------------------------
