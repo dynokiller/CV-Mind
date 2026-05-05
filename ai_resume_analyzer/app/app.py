@@ -173,15 +173,9 @@ def generate_otp():
 
 def send_mail(email: str, mail_type: str, otp: str = None, redirect: str = None, subject: str = None, message: str = None):
     try:
-        # Use absolute imports or ensure package structure is respected
-        try:
-            from mail_service.handlers.otp_mail import build_otp_email
-            from mail_service.handlers.reset_mail import build_reset_email
-            from mail_service.handlers.announcement_mail import build_announcement_email
-        except ImportError:
-            from .mail_service.handlers.otp_mail import build_otp_email
-            from .mail_service.handlers.reset_mail import build_reset_email
-            from .mail_service.handlers.announcement_mail import build_announcement_email
+        from mail_service.handlers.otp_mail import build_otp_email
+        from mail_service.handlers.reset_mail import build_reset_email
+        from mail_service.handlers.announcement_mail import build_announcement_email
         
         MAIL_EMAIL = os.getenv("MAIL_EMAIL")
         MAIL_APP_PASSWORD = os.getenv("MAIL_APP_PASSWORD")
@@ -580,6 +574,7 @@ def verify_account():
             "$unset": {
                 "otp_hash": "",
                 "otp_expiry": ""
+            }
         }
     )
 
@@ -1701,4 +1696,4 @@ def add_no_cache_headers(response):
     return response
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
