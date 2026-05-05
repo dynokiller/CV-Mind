@@ -806,7 +806,7 @@ def dashboard():
 
     try:
         stats = get_user_stats(user_id)
-        activity_cursor = activity_collection.find({"user_id": user_id}).sort("upload_date", -1).limit(8)
+        activity_cursor = activity_collection.find({"user_id": user_id}, {"file_content": 0, "resume_text": 0}).sort("upload_date", -1).limit(8)
         activities = list(activity_cursor)
 
         for act in activities:
@@ -1095,7 +1095,7 @@ def parsed():
         return redirect(url_for("signin"))
     
     user_id = session["user_id"]
-    activities = list(activity_collection.find({"user_id": user_id}).sort("upload_date", -1))
+    activities = list(activity_collection.find({"user_id": user_id}, {"file_content": 0, "resume_text": 0}).sort("upload_date", -1))
     
     for act in activities:
         act["_id"] = str(act["_id"])
@@ -1280,7 +1280,7 @@ def matching():
 
             
     # GET request
-    resumes = list(activity_collection.find({"user_id": user_id, "status": "Success"}))
+    resumes = list(activity_collection.find({"user_id": user_id, "status": "Success"}, {"file_content": 0, "resume_text": 0}))
     for r in resumes: r["_id"] = str(r["_id"])
     return render_template("matching.html", page="matching", resumes=resumes)
 
@@ -1383,7 +1383,7 @@ def export_data():
         return redirect(url_for("signin"))
         
     user_id = session["user_id"]
-    activities = list(activity_collection.find({"user_id": user_id}))
+    activities = list(activity_collection.find({"user_id": user_id}, {"file_content": 0}))
     
     for act in activities:
         act["_id"] = str(act["_id"])
@@ -1511,7 +1511,7 @@ def admin():
         
         # Check activity for active status (based on last_updated or by querying activity_collection)
         # Using activity_collection for more accuracy on parsing activity:
-        user_activities = list(activity_collection.find({"user_id": uid}))
+        user_activities = list(activity_collection.find({"user_id": uid}, {"file_content": 0, "resume_text": 0}))
         last_active = None
         
         domain_counts = {}
