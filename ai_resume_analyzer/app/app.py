@@ -1272,20 +1272,24 @@ def matching():
                 print("[DEBUG] Missing resume_id or job_description")
                 return jsonify({"success": False, "error": "Missing resume or job description"}), 400
                 
-            print(f"[DEBUG] Querying MongoDB for resume: {resume_id}")
-            # Add a timeout to the MongoDB query
-            activity = activity_collection.find_one({"_id": ObjectId(resume_id), "user_id": user_id})
+            print(f"[DEBUG] STEP 1: /matching POST received for resume {resume_id}")
+            
+            # Add a strict timeout to the MongoDB query
+            try:
+                activity = activity_collection.find_one(
+                    {"_id": ObjectId(resume_id), "user_id": user_id},
+                    max_time_ms=5000
+                )
+            except Exception as db_e:
+                print(f"[DEBUG] STEP 1.5: DB Query Failed: {db_e}")
+                return jsonify({"success": False, "error": "Database timeout. Please try again."}), 500
             
             if not activity:
-                print(f"[DEBUG] Resume {resume_id} not found in database")
+                print(f"[DEBUG] STEP 2: Resume {resume_id} not found")
                 return jsonify({"success": False, "error": "Resume not found"}), 404
                 
             resume_text = activity.get("resume_text", "")
-            if not resume_text:
-                print("[DEBUG] Resume text is empty in DB")
-                return jsonify({"success": False, "error": "Resume text is missing. Please re-upload your resume."}), 400
-            
-            print(f"[DEBUG] Resume text length: {len(resume_text)}. Proceeding to AI...")
+            print(f"[DEBUG] STEP 3: Resume found (Text Length: {len(resume_text)})")
 
         google_key = os.getenv("GOOGLE_API_KEY")
         openai_key = os.getenv("OPENAI_API_KEY")
@@ -1330,10 +1334,10 @@ def matching():
                     }
                 }
                 
-                print("[DEBUG] Sending direct REST request to Gemini...")
+                print("[DEBUG] STEP 4: Sending REST request to Gemini...")
                 try:
-                    response = requests.post(url, json=payload, timeout=15)
-                    print(f"[DEBUG] Gemini responded with status {response.status_code}")
+                    response = requests.post(url, json=payload, timeout=10)
+                    print(f"[DEBUG] STEP 5: Gemini responded with status {response.status_code}")
                     
                     if response.status_code == 200:
                         result = response.json()
