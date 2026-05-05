@@ -1187,11 +1187,8 @@ def matching():
 
         if google_key:
             try:
-                # Using Gemini via OpenAI-compatible endpoint for better stability and JSON support
-                gemini_client = OpenAI(
-                    api_key=google_key,
-                    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-                )
+                # Using direct requests to call Gemini API to avoid library conflicts/dependency issues
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={google_key}"
                 
                 prompt = f"""
                 Compare the following Resume against the Job Description.
@@ -1212,21 +1209,36 @@ def matching():
                 Ensure the response is valid JSON.
                 """
                 
-                response = gemini_client.chat.completions.create(
-                    model="gemini-1.5-flash",
-                    messages=[{"role": "user", "content": prompt}],
-                    response_format={"type": "json_object"}
-                )
+                payload = {
+                    "contents": [{
+                        "parts": [{"text": prompt}]
+                    }],
+                    "generationConfig": {
+                        "response_mime_type": "application/json"
+                    }
+                }
                 
-                analysis = json.loads(response.choices[0].message.content)
-                return jsonify({
-                    "success": True,
-                    "score": analysis.get("score", 0),
-                    "summary": analysis.get("summary", ""),
-                    "matches": analysis.get("matches", []),
-                    "missing": analysis.get("missing", []),
-                    "feedback": analysis.get("feedback", "")
-                })
+                response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    # Extract the text from Gemini's nested response structure
+                    if 'candidates' in result and len(result['candidates']) > 0:
+                        raw_text = result['candidates'][0]['content']['parts'][0]['text']
+                        analysis = json.loads(raw_text)
+                        return jsonify({
+                            "success": True,
+                            "score": analysis.get("score", 0),
+                            "summary": analysis.get("summary", ""),
+                            "matches": analysis.get("matches", []),
+                            "missing": analysis.get("missing", []),
+                            "feedback": analysis.get("feedback", "")
+                        })
+                    else:
+                        raise Exception("No analysis candidates returned from Gemini.")
+                else:
+                    raise Exception(f"Gemini API error (Status {response.status_code}): {response.text}")
+
             except Exception as e:
                 print(f"[ERROR] Gemini Match failed: {e}")
                 if not openai_key:
