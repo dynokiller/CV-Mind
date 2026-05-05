@@ -993,13 +993,19 @@ def upload_resume():
                         }}
                         """
                         
-                        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={google_key}"
+                        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={google_key}"
                         payload = {
                             "contents": [{"parts": [{"text": prompt}]}],
                             "generationConfig": {"response_mime_type": "application/json"}
                         }
                         
                         res = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
+                        
+                        # Fallback to v1beta if v1 fails
+                        if res.status_code != 200:
+                            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={google_key}"
+                            res = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
+
                         if res.status_code == 200:
                             gemini_result = res.json()
                             raw_json = gemini_result['candidates'][0]['content']['parts'][0]['text']
@@ -1281,8 +1287,8 @@ def matching():
                 Ensure the response is valid JSON.
                 """
 
-                # 1. Primary Attempt: Gemini 1.5 Flash (Fastest and supports JSON mode)
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={google_key}"
+                # 1. Primary Attempt: Gemini 1.5 Flash (Fast and reliable)
+                url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={google_key}"
                 payload = {
                     "contents": [{"parts": [{"text": prompt}]}],
                     "generationConfig": {"response_mime_type": "application/json"}
@@ -1290,13 +1296,9 @@ def matching():
                 
                 response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
                 
-                # 2. Fallback: If 1.5 Flash is not found (404), try Gemini Pro (1.0)
-                if response.status_code == 404:
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={google_key}"
-                    # Gemini 1.0 Pro doesn't support response_mime_type, so we request JSON in the prompt
-                    payload = {
-                        "contents": [{"parts": [{"text": prompt + "\n\nIMPORTANT: You MUST return a valid JSON object only."}]}]
-                    }
+                # 2. Fallback: If v1 fails, try v1beta as some keys/regions might prefer it
+                if response.status_code != 200:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={google_key}"
                     response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
 
                 if response.status_code == 200:
