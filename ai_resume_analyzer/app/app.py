@@ -24,6 +24,9 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 load_dotenv()
+google_key = os.getenv("GOOGLE_API_KEY")
+if google_key:
+    genai.configure(api_key=google_key)
 
 app = Flask(__name__)
 # Generate a highly secure random key if none is provided in the environment.
@@ -994,7 +997,6 @@ def upload_resume():
                         """
                         
                         # Use SDK for fallback analysis
-                        genai.configure(api_key=google_key)
                         model = genai.GenerativeModel('gemini-1.5-flash')
                         
                         res = model.generate_content(
@@ -1272,6 +1274,7 @@ def matching():
 
         if google_key:
             try:
+                print(f"[DEBUG] Starting Gemini matching analysis for user {user_id}")
                 # Define the analysis prompt
                 prompt = f"""
                 Compare the following Resume against the Job Description.
@@ -1292,14 +1295,15 @@ def matching():
                 Ensure the response is valid JSON.
                 """
 
-                # Use the SDK for better reliability and automatic retry handling
-                genai.configure(api_key=google_key)
+                # Use the SDK model instance
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 
+                print("[DEBUG] Sending request to Gemini...")
                 response = model.generate_content(
                     prompt,
                     generation_config={"response_mime_type": "application/json"}
                 )
+                print("[DEBUG] Received response from Gemini.")
                 
                 # Use a more resilient way to get text, as safety filters can block it
                 try:
