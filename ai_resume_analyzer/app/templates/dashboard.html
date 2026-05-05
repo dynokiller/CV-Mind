@@ -157,7 +157,12 @@
             %} N/A {% endif %}
           </td>
 
-          <td><a href="{{ url_for('view_report', activity_id=act._id|string) }}" class="view-btn" style="text-decoration:none; display:inline-block; text-align:center;">View</a></td>
+          <td style="white-space: nowrap;">
+            <a href="{{ url_for('view_report', activity_id=act._id|string) }}" class="view-btn" style="text-decoration:none; display:inline-block; text-align:center;">Report</a>
+            <button onclick="openResumeModal('{{ act._id|string }}')" class="view-btn" style="background: rgba(82, 113, 255, 0.1); color: var(--accent); margin-left: 5px; border: 1px solid var(--accent);" title="View Full Resume">
+              Resume
+            </button>
+          </td>
         </tr>
         {% endfor %} {% else %}
         <tr>

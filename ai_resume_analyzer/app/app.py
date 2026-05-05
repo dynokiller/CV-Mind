@@ -1321,6 +1321,116 @@ def change_password():
     return jsonify({"status": "ok", "message": "Password updated successfully!"})
 
 
+@app.route("/update-settings", methods=["POST"])
+def update_settings():
+    if not is_logged_in():
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    user_id = session["user_id"]
+    
+    # Filter out protected fields
+    protected_fields = ["_id", "user_id", "password", "email", "is_verified", "otp_hash", "otp_expiry"]
+    update_fields = {}
+    for key, value in data.items():
+        if key not in protected_fields:
+            update_fields[key] = value
+            
+    if update_fields:
+        update_fields["last_updated"] = datetime.now()
+        user_collection.update_one({"user_id": user_id}, {"$set": update_fields})
+        
+        if "name" in update_fields:
+            session["name"] = update_fields["name"]
+            
+        return jsonify({"status": "ok", "message": "Settings saved!"})
+    
+    return jsonify({"status": "error", "message": "No changes detected."})
+
+
+@app.route("/erase-data", methods=["POST"])
+def erase_data():
+    if not is_logged_in():
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+        
+    user_id = session["user_id"]
+    activity_collection.delete_many({"user_id": user_id})
+    file_integrity_collection.delete_many({"user_id": user_id})
+    
+    stats_collection.update_one(
+        {"user_id": user_id},
+        {"$set": {
+            "total_resumes": 0,
+            "parsed_success": 0,
+            "avg_match_score": 0,
+            "processing_time": 0,
+            "updated_at": datetime.now()
+        }}
+    )
+    
+    session.pop("last_result", None)
+    return jsonify({"status": "ok", "message": "All data erased."})
+
+
+@app.route("/export-data")
+def export_data():
+    if not is_logged_in():
+        return redirect(url_for("signin"))
+        
+    user_id = session["user_id"]
+    activities = list(activity_collection.find({"user_id": user_id}))
+    
+    for act in activities:
+        act["_id"] = str(act["_id"])
+        if "upload_date" in act and isinstance(act["upload_date"], datetime):
+            act["upload_date"] = act["upload_date"].isoformat()
+            
+    export_json = json.dumps(activities, indent=2)
+    response = make_response(export_json)
+    response.headers["Content-Disposition"] = f"attachment; filename=cv_mind_export_{datetime.now().strftime('%Y%m%d')}.json"
+    response.headers["Content-Type"] = "application/json"
+    return response
+
+
+@app.route("/get-resume/<activity_id>")
+def get_resume(activity_id):
+    if not is_logged_in():
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+        
+    try:
+        activity = activity_collection.find_one({
+            "_id": ObjectId(activity_id),
+            "user_id": session["user_id"]
+        })
+        
+        if not activity:
+            return jsonify({"status": "error", "message": "Resume not found."}), 404
+            
+        return jsonify({
+            "status": "ok",
+            "candidate_name": activity.get("candidate_name", "Unknown"),
+            "resume_text": activity.get("resume_text", "No content found.")
+        })
+    except:
+        return jsonify({"status": "error", "message": "Invalid activity ID."}), 400
+
+
+@app.route("/delete-account", methods=["POST"])
+def delete_account():
+    if not is_logged_in():
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+        
+    user_id = session["user_id"]
+    user_collection.delete_one({"user_id": user_id})
+    stats_collection.delete_one({"user_id": user_id})
+    activity_collection.delete_many({"user_id": user_id})
+    file_integrity_collection.delete_many({"user_id": user_id})
+    reset_tokens_collection.delete_many({"user_id": user_id})
+    
+    session.clear()
+    return jsonify({"status": "ok", "message": "Account deleted."})
+
+
 # ----------------------------
 # Admin Panel
 # ----------------------------

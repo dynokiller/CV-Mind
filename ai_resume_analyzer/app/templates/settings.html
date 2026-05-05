@@ -53,39 +53,39 @@
       <div class="s-form-grid">
         <div class="s-field">
           <label>Full Name</label>
-          <input type="text" id="fullName" value="{{ session.get('name','') }}" placeholder="Your full name" />
+          <input type="text" id="fullName" value="{{ user.get('name', session.get('name','')) }}" placeholder="Your full name" />
         </div>
         <div class="s-field">
           <label>Display Username</label>
-          <input type="text" id="username" value="{{ (session.get('name','user') | lower | replace(' ','_')) }}" placeholder="username" />
+          <input type="text" id="username" value="{{ user.get('username', (session.get('name','user') | lower | replace(' ','_'))) }}" placeholder="username" />
         </div>
         <div class="s-field">
           <label>Email Address</label>
-          <input type="email" id="emailField" value="{{ session.get('user_email','') }}" placeholder="you@example.com" />
+          <input type="email" id="emailField" value="{{ user.get('email', session.get('user_email','')) }}" readonly style="opacity:0.7; cursor:not-allowed;" />
         </div>
         <div class="s-field">
           <label>Phone Number</label>
-          <input type="tel" id="phone" placeholder="+91 98765 43210" />
+          <input type="tel" id="phone" value="{{ user.get('phone','') }}" placeholder="+91 98765 43210" />
         </div>
         <div class="s-field">
           <label>Date of Birth</label>
-          <input type="date" id="dob" />
+          <input type="date" id="dob" value="{{ user.get('dob','') }}" />
         </div>
         <div class="s-field">
           <label>Location / City</label>
-          <input type="text" id="location" placeholder="e.g. Mumbai, India" />
+          <input type="text" id="location" value="{{ user.get('location','') }}" placeholder="e.g. Mumbai, India" />
         </div>
         <div class="s-field s-full">
           <label>Bio / About Me</label>
-          <textarea id="bio" rows="3" placeholder="Tell us a bit about yourself..."></textarea>
+          <textarea id="bio" rows="3" placeholder="Tell us a bit about yourself...">{{ user.get('bio','') }}</textarea>
         </div>
         <div class="s-field">
           <label>LinkedIn URL</label>
-          <input type="url" id="linkedin" placeholder="https://linkedin.com/in/username" />
+          <input type="url" id="linkedin" value="{{ user.get('linkedin','') }}" placeholder="https://linkedin.com/in/username" />
         </div>
         <div class="s-field">
           <label>GitHub / Portfolio</label>
-          <input type="url" id="github" placeholder="https://github.com/username" />
+          <input type="url" id="github" value="{{ user.get('github','') }}" placeholder="https://github.com/username" />
         </div>
       </div>
       <div class="s-actions">
@@ -141,14 +141,14 @@
           <span class="setting-label">Two-Factor Authentication</span>
           <span class="setting-desc">Require OTP on every login</span>
         </div>
-        <label class="switch"><input type="checkbox" id="toggle2fa"><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="toggle2fa" {% if user.get('two_factor_auth') %}checked{% endif %}><span class="slider"></span></label>
       </div>
       <div class="setting-row">
         <div class="setting-info">
           <span class="setting-label">Login Alerts via Email</span>
           <span class="setting-desc">Get notified on new sign-ins</span>
         </div>
-        <label class="switch"><input type="checkbox" checked id="toggleLoginAlert"><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="toggleLoginAlert" {% if user.get('login_alerts', True) %}checked{% endif %}><span class="slider"></span></label>
       </div>
       <div class="setting-row">
         <div class="setting-info">
@@ -156,10 +156,10 @@
           <span class="setting-desc">Auto-logout after inactivity</span>
         </div>
         <select class="s-select" id="sessionTimeout">
-          <option value="30">30 minutes</option>
-          <option value="60" selected>1 hour</option>
-          <option value="180">3 hours</option>
-          <option value="0">Never</option>
+          <option value="30" {% if user.get('session_timeout') == '30' %}selected{% endif %}>30 minutes</option>
+          <option value="60" {% if user.get('session_timeout','60') == '60' %}selected{% endif %}>1 hour</option>
+          <option value="180" {% if user.get('session_timeout') == '180' %}selected{% endif %}>3 hours</option>
+          <option value="0" {% if user.get('session_timeout') == '0' %}selected{% endif %}>Never</option>
         </select>
       </div>
     </div>
@@ -192,28 +192,28 @@
           <span class="setting-label">Resume Analyzed</span>
           <span class="setting-desc">Email when your resume analysis is complete</span>
         </div>
-        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="notifEmailResume" {% if user.get('notif_email_resume', True) %}checked{% endif %}><span class="slider"></span></label>
       </div>
       <div class="setting-row">
         <div class="setting-info">
           <span class="setting-label">Weekly Summary Report</span>
           <span class="setting-desc">Get a weekly digest of your activity</span>
         </div>
-        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="notifEmailWeekly" {% if user.get('notif_email_weekly', True) %}checked{% endif %}><span class="slider"></span></label>
       </div>
       <div class="setting-row">
         <div class="setting-info">
           <span class="setting-label">Job Match Alerts</span>
           <span class="setting-desc">Notify when new job matches are found</span>
         </div>
-        <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="notifEmailJobMatch" {% if user.get('notif_email_job_match') %}checked{% endif %}><span class="slider"></span></label>
       </div>
       <div class="setting-row">
         <div class="setting-info">
           <span class="setting-label">Promotional Emails</span>
           <span class="setting-desc">News, tips and feature announcements</span>
         </div>
-        <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="notifEmailPromo" {% if user.get('notif_email_promo') %}checked{% endif %}><span class="slider"></span></label>
       </div>
     </div>
 
@@ -224,25 +224,25 @@
           <span class="setting-label">Upload Complete Alert</span>
           <span class="setting-desc">Show toast when resume is processed</span>
         </div>
-        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="notifAppUpload" {% if user.get('notif_app_upload', True) %}checked{% endif %}><span class="slider"></span></label>
       </div>
       <div class="setting-row">
         <div class="setting-info">
           <span class="setting-label">Score Drop Warning</span>
           <span class="setting-desc">Alert when match score drops below threshold</span>
         </div>
-        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="notifAppScoreDrop" {% if user.get('notif_app_score_drop', True) %}checked{% endif %}><span class="slider"></span></label>
       </div>
       <div class="setting-row">
         <div class="setting-info">
           <span class="setting-label">Score Alert Threshold</span>
           <span class="setting-desc">Notify when score falls below this value</span>
         </div>
-        <select class="s-select">
-          <option>50%</option>
-          <option selected>60%</option>
-          <option>70%</option>
-          <option>80%</option>
+        <select class="s-select" id="notifAppScoreThreshold">
+          <option value="50" {% if user.get('notif_app_score_threshold') == '50' %}selected{% endif %}>50%</option>
+          <option value="60" {% if user.get('notif_app_score_threshold','60') == '60' %}selected{% endif %}>60%</option>
+          <option value="70" {% if user.get('notif_app_score_threshold') == '70' %}selected{% endif %}>70%</option>
+          <option value="80" {% if user.get('notif_app_score_threshold') == '80' %}selected{% endif %}>80%</option>
         </select>
       </div>
       <div class="s-actions">
@@ -290,7 +290,7 @@
           <span class="setting-label">Animations</span>
           <span class="setting-desc">Enable smooth UI transitions</span>
         </div>
-        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="enableAnimations" {% if user.get('enable_animations', True) %}checked{% endif %}><span class="slider"></span></label>
       </div>
       <div class="setting-row">
         <div class="setting-info">
@@ -298,10 +298,10 @@
           <span class="setting-desc">Adjust base font size</span>
         </div>
         <select class="s-select" id="fontSize" onchange="applyFontSize(this.value)">
-          <option value="14">Small (14px)</option>
-          <option value="15" selected>Medium (15px)</option>
-          <option value="16">Large (16px)</option>
-          <option value="18">Extra Large (18px)</option>
+          <option value="14" {% if user.get('font_size') == '14' %}selected{% endif %}>Small (14px)</option>
+          <option value="15" {% if user.get('font_size','15') == '15' %}selected{% endif %}>Medium (15px)</option>
+          <option value="16" {% if user.get('font_size') == '16' %}selected{% endif %}>Large (16px)</option>
+          <option value="18" {% if user.get('font_size') == '18' %}selected{% endif %}>Extra Large (18px)</option>
         </select>
       </div>
       <div class="setting-row">
@@ -309,10 +309,10 @@
           <span class="setting-label">Date Format</span>
           <span class="setting-desc">How dates appear in the app</span>
         </div>
-        <select class="s-select">
-          <option>DD/MM/YYYY</option>
-          <option>MM/DD/YYYY</option>
-          <option>YYYY-MM-DD</option>
+        <select class="s-select" id="dateFormat">
+          <option value="DD/MM/YYYY" {% if user.get('date_format','DD/MM/YYYY') == 'DD/MM/YYYY' %}selected{% endif %}>DD/MM/YYYY</option>
+          <option value="MM/DD/YYYY" {% if user.get('date_format') == 'MM/DD/YYYY' %}selected{% endif %}>MM/DD/YYYY</option>
+          <option value="YYYY-MM-DD" {% if user.get('date_format') == 'YYYY-MM-DD' %}selected{% endif %}>YYYY-MM-DD</option>
         </select>
       </div>
       <div class="s-actions">
@@ -332,21 +332,21 @@
           <span class="setting-label">Public Profile</span>
           <span class="setting-desc">Allow others to view your public profile</span>
         </div>
-        <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="privacyPublicProfile" {% if user.get('privacy_public') %}checked{% endif %}><span class="slider"></span></label>
       </div>
       <div class="setting-row">
         <div class="setting-info">
           <span class="setting-label">Show Email on Profile</span>
           <span class="setting-desc">Display email to other users</span>
         </div>
-        <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="privacyShowEmail" {% if user.get('privacy_show_email') %}checked{% endif %}><span class="slider"></span></label>
       </div>
       <div class="setting-row">
         <div class="setting-info">
           <span class="setting-label">Share Analytics Data</span>
           <span class="setting-desc">Help improve CV Mind with anonymous usage stats</span>
         </div>
-        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="privacyShareAnalytics" {% if user.get('privacy_share_stats', True) %}checked{% endif %}><span class="slider"></span></label>
       </div>
     </div>
 
@@ -357,11 +357,11 @@
           <span class="setting-label">Auto-Delete Old Resumes</span>
           <span class="setting-desc">Remove uploaded files after set period</span>
         </div>
-        <select class="s-select">
-          <option>Never</option>
-          <option>After 30 days</option>
-          <option selected>After 90 days</option>
-          <option>After 1 year</option>
+        <select class="s-select" id="autoDeleteResumes">
+          <option value="never" {% if user.get('auto_delete','never') == 'never' %}selected{% endif %}>Never</option>
+          <option value="30" {% if user.get('auto_delete') == '30' %}selected{% endif %}>After 30 days</option>
+          <option value="90" {% if user.get('auto_delete','90') == '90' %}selected{% endif %}>After 90 days</option>
+          <option value="365" {% if user.get('auto_delete') == '365' %}selected{% endif %}>After 1 year</option>
         </select>
       </div>
       <div class="setting-row">
@@ -369,7 +369,7 @@
           <span class="setting-label">Download My Data</span>
           <span class="setting-desc">Export all your resume analysis history</span>
         </div>
-        <button class="s-btn-outline" onclick="showToast('Export started — check your email.')">
+        <button class="s-btn-outline" onclick="exportData()">
           <i class="fa-solid fa-download"></i> Export
         </button>
       </div>
@@ -378,7 +378,7 @@
           <span class="setting-label">Cookie Preferences</span>
           <span class="setting-desc">Manage analytics and tracking cookies</span>
         </div>
-        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="cookiePref" {% if user.get('cookie_consent', True) %}checked{% endif %}><span class="slider"></span></label>
       </div>
       <div class="s-actions">
         <button class="s-btn-primary" onclick="saveSection('privacy')">
@@ -397,30 +397,30 @@
           <span class="setting-label">Auto Resume Parsing</span>
           <span class="setting-desc">Automatically parse on upload without confirmation</span>
         </div>
-        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="aiAutoParse" {% if user.get('ai_auto_parse', True) %}checked{% endif %}><span class="slider"></span></label>
       </div>
       <div class="setting-row">
         <div class="setting-info">
           <span class="setting-label">LinkedIn Analysis</span>
           <span class="setting-desc">Enable LinkedIn profile text analysis</span>
         </div>
-        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="aiLinkedInAnalysis" {% if user.get('ai_linkedin', True) %}checked{% endif %}><span class="slider"></span></label>
       </div>
       <div class="setting-row">
         <div class="setting-info">
           <span class="setting-label">Show Confidence Score</span>
           <span class="setting-desc">Display AI confidence percentage on results</span>
         </div>
-        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="aiShowConfidence" {% if user.get('ai_show_confidence', True) %}checked{% endif %}><span class="slider"></span></label>
       </div>
       <div class="setting-row">
         <div class="setting-info">
           <span class="setting-label">Default Analysis Mode</span>
           <span class="setting-desc">Choose default mode when uploading</span>
         </div>
-        <select class="s-select">
-          <option selected>Resume Upload</option>
-          <option>LinkedIn Text</option>
+        <select class="s-select" id="aiDefaultMode">
+          <option value="upload" {% if user.get('ai_default_mode','upload') == 'upload' %}selected{% endif %}>Resume Upload</option>
+          <option value="linkedin" {% if user.get('ai_default_mode') == 'linkedin' %}selected{% endif %}>LinkedIn Text</option>
         </select>
       </div>
     </div>
@@ -432,12 +432,12 @@
           <span class="setting-label">Minimum Match Score</span>
           <span class="setting-desc">Filter results below this threshold</span>
         </div>
-        <select class="s-select">
-          <option>No filter</option>
-          <option>50%</option>
-          <option selected>60%</option>
-          <option>70%</option>
-          <option>80%</option>
+        <select class="s-select" id="aiMinMatchScore">
+          <option value="0" {% if user.get('ai_min_score','0') == '0' %}selected{% endif %}>No filter</option>
+          <option value="50" {% if user.get('ai_min_score') == '50' %}selected{% endif %}>50%</option>
+          <option value="60" {% if user.get('ai_min_score','60') == '60' %}selected{% endif %}>60%</option>
+          <option value="70" {% if user.get('ai_min_score') == '70' %}selected{% endif %}>70%</option>
+          <option value="80" {% if user.get('ai_min_score') == '80' %}selected{% endif %}>80%</option>
         </select>
       </div>
       <div class="setting-row">
@@ -445,14 +445,14 @@
           <span class="setting-label">Preferred Job Domain</span>
           <span class="setting-desc">Pre-select a domain for matching</span>
         </div>
-        <select class="s-select">
-          <option>Any</option>
-          <option>Software Engineer</option>
-          <option>Data Science</option>
-          <option>Marketing</option>
-          <option>Finance</option>
-          <option>Healthcare</option>
-          <option>HR</option>
+        <select class="s-select" id="aiPreferredDomain">
+          <option value="any" {% if user.get('ai_domain','any') == 'any' %}selected{% endif %}>Any</option>
+          <option value="Software Engineer" {% if user.get('ai_domain') == 'Software Engineer' %}selected{% endif %}>Software Engineer</option>
+          <option value="Data Science" {% if user.get('ai_domain') == 'Data Science' %}selected{% endif %}>Data Science</option>
+          <option value="Marketing" {% if user.get('ai_domain') == 'Marketing' %}selected{% endif %}>Marketing</option>
+          <option value="Finance" {% if user.get('ai_domain') == 'Finance' %}selected{% endif %}>Finance</option>
+          <option value="Healthcare" {% if user.get('ai_domain') == 'Healthcare' %}selected{% endif %}>Healthcare</option>
+          <option value="HR" {% if user.get('ai_domain') == 'HR' %}selected{% endif %}>HR</option>
         </select>
       </div>
       <div class="setting-row">
@@ -460,15 +460,15 @@
           <span class="setting-label">Max Resumes Stored</span>
           <span class="setting-desc">Keep only the latest N analyses</span>
         </div>
-        <select class="s-select">
-          <option>25</option>
-          <option selected>50</option>
-          <option>100</option>
-          <option>Unlimited</option>
+        <select class="s-select" id="aiMaxResumes">
+          <option value="25" {% if user.get('ai_max_resumes') == '25' %}selected{% endif %}>25</option>
+          <option value="50" {% if user.get('ai_max_resumes','50') == '50' %}selected{% endif %}>50</option>
+          <option value="100" {% if user.get('ai_max_resumes') == '100' %}selected{% endif %}>100</option>
+          <option value="0" {% if user.get('ai_max_resumes') == '0' %}selected{% endif %}>Unlimited</option>
         </select>
       </div>
       <div class="s-actions">
-        <button class="s-btn-primary" onclick="saveSection('resume ai')">
+        <button class="s-btn-primary" onclick="saveSection('resume')">
           <i class="fa-solid fa-floppy-disk"></i> Save AI Settings
         </button>
       </div>
@@ -498,7 +498,36 @@
   }
 
   function saveSection(section) {
-    showToast(section.charAt(0).toUpperCase() + section.slice(1) + ' settings saved!');
+    const data = {};
+    const panel = document.getElementById('tab-' + section);
+    
+    // Collect all inputs, selects and textareas in this panel
+    panel.querySelectorAll('input, select, textarea').forEach(el => {
+      if (!el.id) return;
+      
+      if (el.type === 'checkbox') {
+        data[el.id] = el.checked;
+      } else {
+        data[el.id] = el.value;
+      }
+    });
+
+    fetch('/update-settings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(d => {
+      showToast(d.message || 'Settings saved!');
+    })
+    .catch(err => {
+      console.error(err);
+      showToast('Error saving settings.');
+    });
   }
 
   /* ── Password visibility ── */
@@ -549,13 +578,32 @@
 
   /* ── Danger zone ── */
   function confirmDeleteData() {
-    if (confirm('This will permanently delete all your resume data. Continue?')) {
-      showToast('All data erased.');
+    if (confirm('This will permanently delete all your resume data and history. Continue?')) {
+      fetch('/erase-data', {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token() }}'}
+      })
+      .then(r => r.json())
+      .then(d => {
+        showToast(d.message);
+        setTimeout(() => location.reload(), 1500);
+      });
     }
   }
+  function exportData() {
+    window.location.href = '/export-data';
+    showToast('Export started.');
+  }
   function confirmDeleteAccount() {
-    if (confirm('Delete your account permanently? This cannot be undone.')) {
-      window.location.href = '/logout';
+    if (confirm('Delete your account permanently? ALL data will be lost. This cannot be undone.')) {
+      fetch('/delete-account', {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token() }}'}
+      })
+      .then(r => r.json())
+      .then(d => {
+        window.location.href = '/logout';
+      });
     }
   }
 
