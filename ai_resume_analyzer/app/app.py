@@ -1187,9 +1187,7 @@ def matching():
 
         if google_key:
             try:
-                # Using direct requests to call Gemini API to avoid library conflicts/dependency issues
-                url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={google_key}"
-                
+                # Define the analysis prompt
                 prompt = f"""
                 Compare the following Resume against the Job Description.
                 
@@ -1208,23 +1206,35 @@ def matching():
                 
                 Ensure the response is valid JSON.
                 """
-                
+
+                # 1. Primary Attempt: Gemini 1.5 Flash (Fastest and supports JSON mode)
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={google_key}"
                 payload = {
-                    "contents": [{
-                        "parts": [{"text": prompt}]
-                    }],
-                    "generationConfig": {
-                        "response_mime_type": "application/json"
-                    }
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"response_mime_type": "application/json"}
                 }
                 
                 response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
                 
+                # 2. Fallback: If 1.5 Flash is not found (404), try Gemini Pro (1.0)
+                if response.status_code == 404:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={google_key}"
+                    # Gemini 1.0 Pro doesn't support response_mime_type, so we request JSON in the prompt
+                    payload = {
+                        "contents": [{"parts": [{"text": prompt + "\n\nIMPORTANT: You MUST return a valid JSON object only."}]}]
+                    }
+                    response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
+
                 if response.status_code == 200:
                     result = response.json()
-                    # Extract the text from Gemini's nested response structure
                     if 'candidates' in result and len(result['candidates']) > 0:
                         raw_text = result['candidates'][0]['content']['parts'][0]['text']
+                        # Basic cleaning in case the model didn't follow JSON mode (especially for fallback)
+                        if "```json" in raw_text:
+                            raw_text = raw_text.split("```json")[1].split("```")[0].strip()
+                        elif "```" in raw_text:
+                            raw_text = raw_text.split("```")[1].split("```")[0].strip()
+                        
                         analysis = json.loads(raw_text)
                         return jsonify({
                             "success": True,
