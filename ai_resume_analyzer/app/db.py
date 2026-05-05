@@ -24,10 +24,10 @@ db = client[MONGO_DBNAME]
 user_collection = db["user"]
 stats_collection = db["stats"]
 activity_collection = db["activity"]
+notification_collection = db["notifications"]
 file_integrity_collection = db["file_integrity"]
-reset_tokens_collection = db["password_reset_tokens"]  
-
 reset_tokens_collection = db["password_reset_tokens"]
+
 
 # Auto delete expired password reset tokens
 try:

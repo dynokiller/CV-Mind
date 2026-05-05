@@ -1,6 +1,6 @@
 from flask import Flask, render_template, redirect, url_for, request, session, flash, make_response, jsonify
 from authlib.integrations.flask_client import OAuth
-from db import user_collection, stats_collection, activity_collection, file_integrity_collection, reset_tokens_collection   
+from db import user_collection, stats_collection, activity_collection, notification_collection, file_integrity_collection, reset_tokens_collection   
 from itsdangerous import URLSafeTimedSerializer
 from werkzeug.middleware.proxy_fix import ProxyFix
 import sys, os, time, smtplib, requests, pytz, random, re, uuid, filetype, json
@@ -163,6 +163,7 @@ EMAIL_TYPES = {
     "OTP_VERIFY": "/send-otp",
     "RESET_PASSWORD": "/reset-password",
     "WELCOME": "/welcome",
+    "ANNOUNCEMENT": "/announcement",
 }
 
 
@@ -170,10 +171,17 @@ def generate_otp():
     return str(random.randint(100000, 999999))
 
 
-def send_mail(email: str, mail_type: str, otp: str = None, redirect: str = None):
+def send_mail(email: str, mail_type: str, otp: str = None, redirect: str = None, subject: str = None, message: str = None):
     try:
-        from mail_service.handlers.otp_mail import build_otp_email
-        from mail_service.handlers.reset_mail import build_reset_email
+        # Use absolute imports or ensure package structure is respected
+        try:
+            from mail_service.handlers.otp_mail import build_otp_email
+            from mail_service.handlers.reset_mail import build_reset_email
+            from mail_service.handlers.announcement_mail import build_announcement_email
+        except ImportError:
+            from .mail_service.handlers.otp_mail import build_otp_email
+            from .mail_service.handlers.reset_mail import build_reset_email
+            from .mail_service.handlers.announcement_mail import build_announcement_email
         
         MAIL_EMAIL = os.getenv("MAIL_EMAIL")
         MAIL_APP_PASSWORD = os.getenv("MAIL_APP_PASSWORD")
@@ -184,12 +192,14 @@ def send_mail(email: str, mail_type: str, otp: str = None, redirect: str = None)
             print("[ERROR] MAIL_EMAIL or MAIL_APP_PASSWORD not set in .env")
             return {"success": False, "message": "Mail service not configured"}
             
-        data = {"email": email, "type": mail_type, "otp": otp, "redirect": redirect}
+        data = {"email": email, "type": mail_type, "otp": otp, "redirect": redirect, "subject": subject, "message": message}
         
         if mail_type == "OTP_VERIFY":
             msg = build_otp_email(data)
         elif mail_type == "RESET_PASSWORD":
             msg = build_reset_email(data)
+        elif mail_type == "ANNOUNCEMENT":
+            msg = build_announcement_email(data)
         else:
             return {"success": False, "message": f"Invalid mail type: {mail_type}"}
             
@@ -201,7 +211,21 @@ def send_mail(email: str, mail_type: str, otp: str = None, redirect: str = None)
         
     except Exception as e:
         print(f"[ERROR] Failed to send email: {e}")
-        return {"success": False, "message": "Mail service unreachable"}
+        return {"success": False, "message": f"Mail error: {str(e)}"}
+
+
+def add_notification(user_id, title, message, n_type="info"):
+    try:
+        notification_collection.insert_one({
+            "user_id": user_id,
+            "title": title,
+            "message": message,
+            "type": n_type,
+            "is_read": False,
+            "created_at": datetime.now()
+        })
+    except Exception as e:
+        print(f"[ERROR] Failed to add notification: {e}")
 
 # ----------------------------
 # Google reCAPTCHA verification
@@ -312,6 +336,8 @@ def signup():
         "role": None,
         "subrole": None
     })
+
+    add_notification(user_id, "Welcome to CV Mind!", "Your account has been created. Please verify your email to get started.", "success")
 
     create_initial_stats(user_id)
 
@@ -554,9 +580,10 @@ def verify_account():
             "$unset": {
                 "otp_hash": "",
                 "otp_expiry": ""
-            }                                       
         }
     )
+
+    add_notification(user.get("user_id"), "Account Verified!", "Your email has been successfully verified. You can now use all features.", "success")
 
     session.pop("verify_allowed", None)
     session.pop("verify_email", None)
@@ -962,6 +989,7 @@ def upload_resume():
                 "latency_ms": round(process_time * 1000)
             }
             success_count += 1
+            add_notification(user_id, "Resume Processed", f"Successfully analyzed {file.filename}.", "success")
 
         activity_collection.insert_one({
             "user_id": user_id,
@@ -1598,6 +1626,58 @@ def admin():
     }
     
     return render_template("admin.html", page="admin", data=admin_data)
+
+
+@app.route("/admin/send-announcement", methods=["POST"])
+def admin_send_announcement():
+    if not is_logged_in() or session.get("user_email") != "usecvmind@gmail.com":
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+
+    subject = request.form.get("subject")
+    message = request.form.get("message")
+
+    if not subject or not message:
+        flash("Subject and message are required.", "error")
+        return redirect(url_for("admin"))
+
+    users = list(user_collection.find({}, {"email": 1, "user_id": 1, "name": 1}))
+    
+    success_count = 0
+    for u in users:
+        email = u.get("email")
+        if email:
+            res = send_mail(email=email, mail_type="ANNOUNCEMENT", subject=subject, message=message)
+            if res["success"]:
+                success_count += 1
+                add_notification(u.get("user_id"), subject, message, "info")
+
+    flash(f"Announcement sent to {success_count} users.", "success")
+    return redirect(url_for("admin"))
+
+
+@app.route("/get-notifications")
+def get_notifications():
+    if not is_logged_in():
+        return jsonify([])
+
+    user_id = session["user_id"]
+    notifications = list(notification_collection.find({"user_id": user_id}).sort("created_at", -1).limit(10))
+    
+    for n in notifications:
+        n["_id"] = str(n["_id"])
+        n["created_at"] = n["created_at"].strftime("%b %d, %H:%M")
+        
+    return jsonify(notifications)
+
+
+@app.route("/mark-notifications-read", methods=["POST"])
+def mark_notifications_read():
+    if not is_logged_in():
+        return jsonify({"success": False}), 401
+
+    user_id = session["user_id"]
+    notification_collection.update_many({"user_id": user_id}, {"$set": {"is_read": True}})
+    return jsonify({"success": True})
 
 
 # ----------------------------

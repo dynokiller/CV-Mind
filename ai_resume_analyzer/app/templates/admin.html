@@ -84,6 +84,32 @@
   </div>
 </div>
 
+<!-- Send System Announcement -->
+<div class="card-box full" style="margin-top: 25px;">
+  <h3><i class="fa-solid fa-bullhorn"></i> Send System Announcement</h3>
+  <p style="color: #64748b; margin-bottom: 20px;">Send an email and in-app notification to all registered users.</p>
+  
+  <form action="/admin/send-announcement" method="POST" class="announcement-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+    <div class="form-group" style="margin-bottom: 15px;">
+      <label for="subject" style="display: block; margin-bottom: 8px; font-weight: 600;">Subject</label>
+      <input type="text" id="subject" name="subject" placeholder="Enter announcement subject..." required
+             style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
+    </div>
+    
+    <div class="form-group" style="margin-bottom: 20px;">
+      <label for="message" style="display: block; margin-bottom: 8px; font-weight: 600;">Message</label>
+      <textarea id="message" name="message" rows="5" placeholder="Write your message here..." required
+                style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); resize: vertical;"></textarea>
+    </div>
+    
+    <button type="submit" class="save-role-btn" style="width: auto; padding: 12px 30px;">
+      <i class="fa-solid fa-paper-plane"></i> Send Announcement
+    </button>
+  </form>
+</div>
+
 <style>
   .analytics-header { margin-bottom: 30px; }
   .analytics-header h2 { color: var(--text); font-size: 1.8rem; margin-bottom: 5px; }
