@@ -158,15 +158,20 @@
     };
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout
+
       const response = await fetch('/matching', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRFToken': formData.get('csrf_token')
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
       const result = await response.json();
       
       if (result.success) {

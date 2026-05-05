@@ -12,11 +12,11 @@ MONGO_DBNAME = os.getenv("MONGO_DBNAME")
 if not MONGO_URI or not MONGO_DBNAME:
     raise ValueError("MONGO_URI or MONGO_DBNAME not found in .env file")
 
-client = MongoClient(MONGO_URI)
+client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
 db = client[MONGO_DBNAME]
 
 # MongoDB connection
-client = MongoClient(MONGO_URI)
+client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
 
 db = client[MONGO_DBNAME]
 

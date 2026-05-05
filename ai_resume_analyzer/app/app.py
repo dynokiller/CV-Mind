@@ -1261,20 +1261,31 @@ def matching():
     user_id = session["user_id"]
     
     if request.method == "POST":
-        data = request.get_json()
-        resume_id = data.get("resume_id")
-        job_desc = data.get("job_description")
-        
-        if not resume_id or not job_desc:
-            return jsonify({"success": False, "error": "Missing resume or job description"}), 400
+        print("[DEBUG] /matching POST request received")
+        try:
+            data = request.get_json()
+            print(f"[DEBUG] Received data: {data}")
+            resume_id = data.get("resume_id")
+            job_desc = data.get("job_description")
             
-        activity = activity_collection.find_one({"_id": ObjectId(resume_id), "user_id": user_id})
-        if not activity:
-            return jsonify({"success": False, "error": "Resume not found"}), 404
+            if not resume_id or not job_desc:
+                print("[DEBUG] Missing resume_id or job_description")
+                return jsonify({"success": False, "error": "Missing resume or job description"}), 400
+                
+            print(f"[DEBUG] Querying MongoDB for resume: {resume_id}")
+            # Add a timeout to the MongoDB query
+            activity = activity_collection.find_one({"_id": ObjectId(resume_id), "user_id": user_id})
             
-        resume_text = activity.get("resume_text", "")
-        if not resume_text:
-            return jsonify({"success": False, "error": "Resume text is missing. Please re-upload your resume."}), 400
+            if not activity:
+                print(f"[DEBUG] Resume {resume_id} not found in database")
+                return jsonify({"success": False, "error": "Resume not found"}), 404
+                
+            resume_text = activity.get("resume_text", "")
+            if not resume_text:
+                print("[DEBUG] Resume text is empty in DB")
+                return jsonify({"success": False, "error": "Resume text is missing. Please re-upload your resume."}), 400
+            
+            print(f"[DEBUG] Resume text length: {len(resume_text)}. Proceeding to AI...")
 
         google_key = os.getenv("GOOGLE_API_KEY")
         openai_key = os.getenv("OPENAI_API_KEY")
