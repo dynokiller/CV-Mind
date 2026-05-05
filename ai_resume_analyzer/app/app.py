@@ -1188,7 +1188,7 @@ def matching():
         if google_key:
             try:
                 # Using direct requests to call Gemini API to avoid library conflicts/dependency issues
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={google_key}"
+                url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={google_key}"
                 
                 prompt = f"""
                 Compare the following Resume against the Job Description.
