@@ -95,6 +95,29 @@
         display: flex;
         justify-content: flex-end;
       }
+      .modal-tabs {
+        display: flex;
+        gap: 15px;
+        padding: 0 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+      }
+      .modal-tab {
+        padding: 12px 5px;
+        background: none;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.85rem;
+        border-bottom: 2px solid transparent;
+        transition: all 0.3s;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .modal-tab.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
     </style>
   </head>
 
@@ -340,12 +363,23 @@
               <i class="fa-solid fa-xmark"></i>
             </button>
           </div>
-          <div class="modal-body">
+          
+          <div class="modal-tabs">
+            <button class="modal-tab active" id="btnTextTab" onclick="switchResumeTab('text')">Text View</button>
+            <button class="modal-tab" id="btnFileTab" onclick="switchResumeTab('file')">Original Document</button>
+          </div>
+
+          <div class="modal-body" id="textTabView">
             <pre id="resumeContent" class="resume-text-area"></pre>
           </div>
+          
+          <div class="modal-body" id="fileTabView" style="display:none; padding:0; height: 65vh;">
+            <iframe id="resumeFrame" src="" style="width:100%; height:100%; border:none;"></iframe>
+          </div>
+
           <div class="modal-footer">
-            <button class="save-role-btn" onclick="viewOriginalResume()" style="width: auto; padding: 10px 20px; background: #6366f1; margin-right: 10px;">
-              <i class="fa-solid fa-file-pdf"></i> View Original
+            <button class="save-role-btn" id="downloadBtn" onclick="downloadOriginalResume()" style="width: auto; padding: 10px 20px; background: #6366f1; margin-right: 10px; display:none;">
+              <i class="fa-solid fa-download"></i> Download
             </button>
             <button class="save-role-btn" onclick="copyResumeText()" style="width: auto; padding: 10px 20px;">
               <i class="fa-solid fa-copy"></i> Copy Text
@@ -546,6 +580,9 @@
 
       function openResumeModal(activityId) {
         activeActivityId = activityId;
+        switchResumeTab('text');
+        document.getElementById('resumeFrame').src = '';
+        
         const modal = document.getElementById('resumeModal');
         const content = document.getElementById('resumeContent');
         const title = document.getElementById('resumeModalTitle');
@@ -568,9 +605,36 @@
           });
       }
 
-      function viewOriginalResume() {
+      function switchResumeTab(tab) {
+        const textTab = document.getElementById('textTabView');
+        const fileTab = document.getElementById('fileTabView');
+        const btnText = document.getElementById('btnTextTab');
+        const btnFile = document.getElementById('btnFileTab');
+        const downloadBtn = document.getElementById('downloadBtn');
+        
+        if (tab === 'text') {
+          textTab.style.display = 'block';
+          fileTab.style.display = 'none';
+          btnText.classList.add('active');
+          btnFile.classList.remove('active');
+          downloadBtn.style.display = 'none';
+        } else {
+          textTab.style.display = 'none';
+          fileTab.style.display = 'block';
+          btnText.classList.remove('active');
+          btnFile.classList.add('active');
+          downloadBtn.style.display = 'inline-block';
+          
+          const frame = document.getElementById('resumeFrame');
+          if (!frame.src && activeActivityId) {
+            frame.src = `/view-original-resume/${activeActivityId}`;
+          }
+        }
+      }
+
+      function downloadOriginalResume() {
         if (activeActivityId) {
-          window.open(`/view-original-resume/${activeActivityId}`, '_blank');
+          window.location.href = `/view-original-resume/${activeActivityId}?download=1`;
         }
       }
 

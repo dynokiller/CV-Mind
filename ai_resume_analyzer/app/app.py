@@ -1467,7 +1467,10 @@ def view_original_resume(activity_id):
         response = make_response(file_content)
         response.headers["Content-Type"] = content_type
         
-        if content_type == "application/pdf":
+        # Check if user explicitly wants download
+        force_download = request.args.get('download') == '1'
+        
+        if content_type == "application/pdf" and not force_download:
             response.headers["Content-Disposition"] = f"inline; filename={display_filename}"
         else:
             response.headers["Content-Disposition"] = f"attachment; filename={display_filename}"
