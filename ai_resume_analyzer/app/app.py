@@ -1187,8 +1187,11 @@ def matching():
 
         if google_key:
             try:
-                genai.configure(api_key=google_key)
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                # Using Gemini via OpenAI-compatible endpoint for better stability and JSON support
+                gemini_client = OpenAI(
+                    api_key=google_key,
+                    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+                )
                 
                 prompt = f"""
                 Compare the following Resume against the Job Description.
@@ -1209,12 +1212,13 @@ def matching():
                 Ensure the response is valid JSON.
                 """
                 
-                response = model.generate_content(
-                    prompt,
-                    generation_config={"response_mime_type": "application/json"}
+                response = gemini_client.chat.completions.create(
+                    model="gemini-1.5-flash",
+                    messages=[{"role": "user", "content": prompt}],
+                    response_format={"type": "json_object"}
                 )
                 
-                analysis = json.loads(response.text)
+                analysis = json.loads(response.choices[0].message.content)
                 return jsonify({
                     "success": True,
                     "score": analysis.get("score", 0),
