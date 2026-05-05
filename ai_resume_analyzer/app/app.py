@@ -15,7 +15,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from bson import ObjectId, Binary
 from text_extractor import extract_candidate_name, extract_text
 from openai import OpenAI
-import google.generativeai as genai
+# Removed genai SDK import as we use direct REST now
 
 
 
